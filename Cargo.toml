@@ -14,3 +14,7 @@ unwrap_used = "forbid"
 expect_used = "forbid"
 
 [dependencies]
+anyhow = "1.0.101"
+hyper = { version = "1.8.1", features = ["http1", "server", "client"] }
+hyper-util = { version = "0.1.20", features = ["tokio"] }
+tokio = { version = "1.49.0", features = ["rt-multi-thread", "net"] }
