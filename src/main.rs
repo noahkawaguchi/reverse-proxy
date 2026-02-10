@@ -1,3 +1,5 @@
+mod logger;
+
 use anyhow::Result;
 use hyper::{
     Request, Response, body::Incoming, client::conn::http1 as client_http1,
@@ -6,6 +8,7 @@ use hyper::{
 use hyper_util::rt::TokioIo;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::{TcpListener, TcpStream};
+use tracing::{error, info, level_filters::LevelFilter};
 
 const LISTEN_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 3000);
 const BACKEND_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8000);
@@ -16,7 +19,7 @@ async fn proxy(req: Request<Incoming>) -> Result<Response<Incoming>> {
 
     tokio::spawn(async move {
         if let Err(e) = conn.await {
-            eprintln!("Backend connection error: {e}");
+            error!("Backend connection error: {e}");
         }
     });
 
@@ -24,8 +27,10 @@ async fn proxy(req: Request<Incoming>) -> Result<Response<Incoming>> {
 }
 
 async fn async_main() -> Result<()> {
+    logger::init_with_default(LevelFilter::INFO)?;
+
     let listener = TcpListener::bind(LISTEN_ADDR).await?;
-    println!("Listening on {LISTEN_ADDR}, forwarding to {BACKEND_ADDR}");
+    info!("Listening on {LISTEN_ADDR}, forwarding to {BACKEND_ADDR}");
 
     loop {
         let (stream, _) = listener.accept().await?;
@@ -36,7 +41,7 @@ async fn async_main() -> Result<()> {
                 .serve_connection(io, service_fn(proxy))
                 .await
             {
-                eprintln!("Connection error: {e}");
+                error!("Connection error: {e}");
             }
         });
     }

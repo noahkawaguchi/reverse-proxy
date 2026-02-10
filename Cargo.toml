@@ -18,3 +18,5 @@ anyhow = "1.0.101"
 hyper = { version = "1.8.1", features = ["http1", "server", "client"] }
 hyper-util = { version = "0.1.20", features = ["tokio"] }
 tokio = { version = "1.49.0", features = ["rt-multi-thread", "net"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
