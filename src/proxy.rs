@@ -32,7 +32,7 @@ pub async fn forward(
     client_addr: SocketAddr,
     backend_addr: SocketAddr,
 ) -> Result<Response<Incoming>> {
-    let req = prepare_request(req, client_addr, backend_addr)?;
+    let prepped_req = prepare_request(req, client_addr, backend_addr)?;
     let io = TokioIo::new(TcpStream::connect(backend_addr).await?);
     let (mut sender, conn) = client_http1::handshake(io).await?;
 
@@ -42,10 +42,12 @@ pub async fn forward(
         }
     });
 
-    let resp = sender.send_request(req).await?;
+    let resp = sender.send_request(prepped_req).await?;
     Ok(prepare_response(resp))
 }
 
+/// Sets X-Forwarded-For to the client IP when absent or appends when present, rewrites Host to the
+/// backend address, and strips hop-by-hop headers.
 fn prepare_request<B>(
     mut req: Request<B>,
     client_addr: SocketAddr,
@@ -75,7 +77,7 @@ fn prepare_response<B>(mut resp: Response<B>) -> Response<B> {
     resp
 }
 
-/// Removes the standard hop-by-hop headers as well as any others named in the connection header.
+/// Removes the standard hop-by-hop headers and any custom headers named in the Connection header.
 fn strip_hop_by_hop_headers(headers: &mut HeaderMap) {
     let extra: Vec<_> = headers
         .get(CONNECTION)
