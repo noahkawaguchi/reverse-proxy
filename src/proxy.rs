@@ -11,7 +11,7 @@ use hyper::{
 use hyper_util::rt::TokioIo;
 use std::net::SocketAddr;
 use tokio::net::TcpStream;
-use tracing::error;
+use tracing::{error, warn};
 
 const X_FORWARDED_FOR: HeaderName = HeaderName::from_static("x-forwarded-for");
 
@@ -56,13 +56,10 @@ fn prepare_request<B>(
     let headers = req.headers_mut();
     let client_ip = client_addr.ip();
 
-    let xff = headers
-        .get(X_FORWARDED_FOR)
-        .and_then(|v| v.to_str().ok())
-        .map_or_else(
-            || client_ip.to_string(),
-            |existing| format!("{existing}, {client_ip}"),
-        );
+    let xff = get_str_val(headers, &X_FORWARDED_FOR).map_or_else(
+        || client_ip.to_string(),
+        |existing| format!("{existing}, {client_ip}"),
+    );
 
     strip_hop_by_hop_headers(headers);
 
@@ -79,10 +76,12 @@ fn prepare_response<B>(mut resp: Response<B>) -> Response<B> {
 
 /// Removes the standard hop-by-hop headers and any custom headers named in the Connection header.
 fn strip_hop_by_hop_headers(headers: &mut HeaderMap) {
-    let extra: Vec<_> = headers
-        .get(CONNECTION)
-        .and_then(|v| v.to_str().ok())
-        .map(|v| v.split(',').map(|s| s.trim().to_lowercase()).collect())
+    let extra = get_str_val(headers, &CONNECTION)
+        .map(|s| {
+            s.split(',')
+                .map(|s| s.trim().to_lowercase())
+                .collect::<Vec<_>>()
+        })
         .unwrap_or_default();
 
     for name in HOP_BY_HOP_HEADERS {
@@ -92,6 +91,19 @@ fn strip_hop_by_hop_headers(headers: &mut HeaderMap) {
     for name in extra {
         headers.remove(name);
     }
+}
+
+/// Gets the `&str` value of `header_name` from `headers`, returning `None` if the header is not
+/// present or the value is not visible ASCII, and warning if present but not visible ASCII.
+fn get_str_val<'a>(headers: &'a HeaderMap, header_name: &HeaderName) -> Option<&'a str> {
+    headers.get(header_name).and_then(|v| match v.to_str() {
+        Ok(s) => Some(s),
+
+        Err(e) => {
+            warn!("Failed to parse {header_name} header value as visible ASCII: {e}");
+            None
+        }
+    })
 }
 
 #[cfg(test)]
