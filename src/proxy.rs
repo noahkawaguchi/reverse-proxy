@@ -100,9 +100,9 @@ mod tests {
     use hyper::header::HeaderValue;
     use std::net::{IpAddr, Ipv4Addr};
 
+    const BACKEND_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8000);
     const CLIENT_ADDR: SocketAddr =
         SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)), 12345);
-    const BACKEND_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8000);
 
     #[test]
     fn strip_removes_standard_hop_by_hop_headers() -> Result<()> {
@@ -143,79 +143,81 @@ mod tests {
 
     #[test]
     fn prepare_request_sets_xff_when_absent() -> Result<()> {
-        let req = Request::builder().body(())?;
-        let req = prepare_request(req, CLIENT_ADDR, BACKEND_ADDR)?;
+        let orig_req = Request::builder().body(())?;
+        let prepped_req = prepare_request(orig_req, CLIENT_ADDR, BACKEND_ADDR)?;
 
-        assert_eq!(
-            req.headers()
-                .get("x-forwarded-for")
-                .map(HeaderValue::as_bytes),
-            Some(b"192.168.1.100".as_slice()),
-        );
+        let xff_val = prepped_req
+            .headers()
+            .get("x-forwarded-for")
+            .map(HeaderValue::as_bytes);
+
+        assert_eq!(xff_val, Some(b"192.168.1.100".as_slice()));
 
         Ok(())
     }
 
     #[test]
     fn prepare_request_appends_to_existing_xff() -> Result<()> {
-        let req = Request::builder()
+        let orig_req = Request::builder()
             .header("x-forwarded-for", "10.0.0.1")
             .body(())?;
-        let req = prepare_request(req, CLIENT_ADDR, BACKEND_ADDR)?;
 
-        assert_eq!(
-            req.headers()
-                .get("x-forwarded-for")
-                .map(HeaderValue::as_bytes),
-            Some(b"10.0.0.1, 192.168.1.100".as_slice()),
-        );
+        let prepped_req = prepare_request(orig_req, CLIENT_ADDR, BACKEND_ADDR)?;
+
+        let xff_val = prepped_req
+            .headers()
+            .get("x-forwarded-for")
+            .map(HeaderValue::as_bytes);
+
+        assert_eq!(xff_val, Some(b"10.0.0.1, 192.168.1.100".as_slice()));
 
         Ok(())
     }
 
     #[test]
     fn prepare_request_rewrites_host_to_backend() -> Result<()> {
-        let req = Request::builder()
+        let orig_req = Request::builder()
             .header(HOST, "original.example.com")
             .body(())?;
-        let req = prepare_request(req, CLIENT_ADDR, BACKEND_ADDR)?;
 
-        assert_eq!(
-            req.headers().get(HOST).map(HeaderValue::as_bytes),
-            Some(b"127.0.0.1:8000".as_slice()),
-        );
+        let prepped_req = prepare_request(orig_req, CLIENT_ADDR, BACKEND_ADDR)?;
+        let host_val = prepped_req.headers().get(HOST).map(HeaderValue::as_bytes);
+
+        assert_eq!(host_val, Some(b"127.0.0.1:8000".as_slice()));
 
         Ok(())
     }
 
     #[test]
     fn prepare_request_strips_hop_by_hop() -> Result<()> {
-        let req = Request::builder()
+        let orig_req = Request::builder()
             .header("connection", "keep-alive")
             .header("keep-alive", "timeout=5")
             .header("x-real-header", "preserved")
             .body(())?;
-        let req = prepare_request(req, CLIENT_ADDR, BACKEND_ADDR)?;
 
-        assert!(req.headers().get("connection").is_none());
-        assert!(req.headers().get("keep-alive").is_none());
-        assert!(req.headers().get("x-real-header").is_some());
+        let prepped_req = prepare_request(orig_req, CLIENT_ADDR, BACKEND_ADDR)?;
+
+        assert!(prepped_req.headers().get("connection").is_none());
+        assert!(prepped_req.headers().get("keep-alive").is_none());
+        assert!(prepped_req.headers().get("x-real-header").is_some());
 
         Ok(())
     }
 
     #[test]
     fn prepare_response_strips_hop_by_hop() -> Result<()> {
-        let resp = Response::builder()
+        let orig_resp = Response::builder()
             .header("connection", "close")
             .header("transfer-encoding", "chunked")
             .header("content-type", "text/html")
             .body(())?;
-        let resp = prepare_response(resp);
 
-        assert!(resp.headers().get("connection").is_none());
-        assert!(resp.headers().get("transfer-encoding").is_none());
-        assert!(resp.headers().get("content-type").is_some());
+        let prepped_resp = prepare_response(orig_resp);
+
+        assert!(prepped_resp.headers().get("connection").is_none());
+        assert!(prepped_resp.headers().get("transfer-encoding").is_none());
+        assert!(prepped_resp.headers().get("content-type").is_some());
 
         Ok(())
     }
