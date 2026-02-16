@@ -1,21 +1,23 @@
+mod config;
 mod logger;
 mod proxy;
 
+use crate::config::Config;
 use anyhow::Result;
 use hyper::{server::conn::http1 as server_http1, service::service_fn};
 use hyper_util::rt::TokioIo;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 use tracing::{error, info, level_filters::LevelFilter};
 
-const LISTEN_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 3000);
-const BACKEND_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8000);
-
 async fn async_main() -> Result<()> {
     logger::init_with_default(LevelFilter::INFO)?;
+    let config = Config::load()?;
 
-    let listener = TcpListener::bind(LISTEN_ADDR).await?;
-    info!("Listening on {LISTEN_ADDR}, forwarding to {BACKEND_ADDR}");
+    let listener = TcpListener::bind(config.listen_addr).await?;
+    info!(
+        "Listening on {}, forwarding to {}",
+        config.listen_addr, config.backend_addr,
+    );
 
     loop {
         let (stream, client_addr) = listener.accept().await?;
@@ -25,11 +27,14 @@ async fn async_main() -> Result<()> {
             if let Err(e) = server_http1::Builder::new()
                 .serve_connection(
                     io,
-                    service_fn(|req| proxy::forward(req, client_addr, BACKEND_ADDR)),
+                    service_fn(|req| proxy::forward(req, client_addr, config.backend_addr)),
                 )
                 .await
             {
-                error!("Error forwarding request from {client_addr} to {BACKEND_ADDR}: {e}");
+                error!(
+                    "Error forwarding request from {client_addr} to {}: {e}",
+                    config.backend_addr
+                );
             }
         });
     }
