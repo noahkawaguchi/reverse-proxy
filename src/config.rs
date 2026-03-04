@@ -1,11 +1,19 @@
 use anyhow::{Context, Result};
-use serde::Deserialize;
-use std::{env, fs, net::SocketAddr};
+use serde::{Deserialize, Deserializer};
+use std::{env, fs, net::SocketAddr, time::Duration};
+
+/// Deserializes a `u64` representing seconds into a `Duration`.
+fn deserialize_duration_secs<'de, D: Deserializer<'de>>(d: D) -> Result<Duration, D::Error> {
+    u64::deserialize(d).map(Duration::from_secs)
+}
 
 #[derive(Deserialize)]
 pub struct Config {
     pub listen_addr: SocketAddr,
     pub backend_addr: SocketAddr,
+
+    #[serde(deserialize_with = "deserialize_duration_secs")]
+    pub shutdown_timeout: Duration,
 }
 
 impl Config {
