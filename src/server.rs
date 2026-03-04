@@ -2,7 +2,7 @@ use crate::{config::Config, proxy};
 use anyhow::Result;
 use hyper::{server::conn::http1 as server_http1, service::service_fn};
 use hyper_util::rt::TokioIo;
-use std::future::Future;
+use std::sync::Arc;
 use tokio::{net::TcpListener, sync::watch, task::JoinSet, time::timeout};
 use tracing::{error, info, warn};
 
@@ -11,10 +11,12 @@ pub async fn run(
     listener: TcpListener,
     shutdown_signal: impl Future<Output = ()>,
 ) -> Result<()> {
+    let routes = Arc::<[_]>::from(config.routes);
+
     info!(
-        "Listening on {}, forwarding to {}",
+        "Listening on {} with {} route(s)",
         listener.local_addr()?,
-        config.backend_addr,
+        routes.len()
     );
 
     let (shutdown_tx, _) = watch::channel(false);
@@ -29,11 +31,14 @@ pub async fn run(
             accept_res = listener.accept() => {
                 let (stream, client_addr) = accept_res?;
                 let mut shutdown_rx = shutdown_tx.subscribe();
+                let conn_routes = Arc::clone(&routes);
 
                 join_set.spawn(async move {
                     let conn = server_http1::Builder::new().serve_connection(
                         TokioIo::new(stream),
-                        service_fn(|req| proxy::forward(req, client_addr, config.backend_addr)),
+                        service_fn(move |req| {
+                            proxy::forward(req, client_addr, Arc::clone(&conn_routes))
+                        }),
                     );
 
                     tokio::pin!(conn);
@@ -42,10 +47,7 @@ pub async fn run(
                         tokio::select! {
                             conn_res = conn.as_mut() => {
                                 if let Err(e) = conn_res {
-                                    error!(
-                                        "Error forwarding request from {client_addr} to {}: {e}",
-                                        config.backend_addr,
-                                    );
+                                    error!("Error serving connection from {client_addr}: {e}");
                                 }
 
                                 break;
@@ -97,18 +99,17 @@ pub async fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::Config, test_utils::tokio_test};
+    use crate::{
+        config::{Config, Route},
+        test_utils::{localhost_addr, tokio_test},
+    };
     use http_body_util::{Empty, Full};
     use hyper::{
         Request, Response, StatusCode, body::Bytes, client::conn::http1 as client_http1,
         server::conn::http1 as server_http1, service::service_fn,
     };
     use hyper_util::rt::TokioIo;
-    use std::{
-        convert::Infallible,
-        net::{IpAddr, Ipv4Addr, SocketAddr},
-        time::Duration,
-    };
+    use std::{convert::Infallible, net::SocketAddr, time::Duration};
     use tokio::{
         net::{TcpListener, TcpStream},
         sync::oneshot,
@@ -117,8 +118,8 @@ mod tests {
 
     fn new_test_config(backend_addr: SocketAddr, shutdown_timeout: Duration) -> Config {
         Config {
-            listen_addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0),
-            backend_addr,
+            listen_addr: localhost_addr(0),
+            routes: vec![Route { prefix: String::from("/"), backend_addr }],
             shutdown_timeout,
         }
     }

@@ -1,4 +1,4 @@
 {
   "useGitignore": true,
-  "words": ["clippy", "serde", "oneshot"]
+  "words": ["clippy", "serde", "oneshot", "combinators"]
 }

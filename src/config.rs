@@ -8,9 +8,15 @@ fn deserialize_duration_secs<'de, D: Deserializer<'de>>(d: D) -> Result<Duration
 }
 
 #[derive(Deserialize)]
+pub struct Route {
+    pub prefix: String,
+    pub backend_addr: SocketAddr,
+}
+
+#[derive(Deserialize)]
 pub struct Config {
     pub listen_addr: SocketAddr,
-    pub backend_addr: SocketAddr,
+    pub routes: Vec<Route>,
 
     #[serde(deserialize_with = "deserialize_duration_secs")]
     pub shutdown_timeout: Duration,

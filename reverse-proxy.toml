@@ -1,3 +1,6 @@
 listen_addr = "127.0.0.1:3000"
-backend_addr = "127.0.0.1:8000"
 shutdown_timeout = 10
+
+[[routes]]
+prefix = "/"
+backend_addr = "127.0.0.1:8000"

@@ -1,7 +1,9 @@
+use crate::config::Route;
 use anyhow::Result;
+use http_body_util::{BodyExt, Empty};
 use hyper::{
-    Request, Response,
-    body::Incoming,
+    Request, Response, StatusCode,
+    body::{Bytes, Incoming},
     client::conn::http1 as client_http1,
     header::{
         CONNECTION, HOST, HeaderMap, HeaderName, PROXY_AUTHENTICATE, PROXY_AUTHORIZATION, TE,
@@ -9,9 +11,12 @@ use hyper::{
     },
 };
 use hyper_util::rt::TokioIo;
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 use tokio::net::TcpStream;
 use tracing::{error, warn};
+
+/// A generic `Response` containing a boxed `Body` (may be `Incoming`, `Empty<Bytes>`, etc.).
+type BoxBodyResp = hyper::Response<http_body_util::combinators::BoxBody<Bytes, hyper::Error>>;
 
 const X_FORWARDED_FOR: HeaderName = HeaderName::from_static("x-forwarded-for");
 
@@ -30,8 +35,13 @@ const HOP_BY_HOP_HEADERS: [HeaderName; 8] = [
 pub async fn forward(
     req: Request<Incoming>,
     client_addr: SocketAddr,
-    backend_addr: SocketAddr,
-) -> Result<Response<Incoming>> {
+    routes: Arc<[Route]>,
+) -> Result<BoxBodyResp> {
+    let Some(route) = resolve(req.uri().path(), &routes) else {
+        return not_found();
+    };
+
+    let backend_addr = route.backend_addr;
     let prepped_req = prepare_request(req, client_addr, backend_addr)?;
     let io = TokioIo::new(TcpStream::connect(backend_addr).await?);
     let (mut sender, conn) = client_http1::handshake(io).await?;
@@ -42,8 +52,33 @@ pub async fn forward(
         }
     });
 
-    let resp = sender.send_request(prepped_req).await?;
-    Ok(prepare_response(resp))
+    sender
+        .send_request(prepped_req)
+        .await
+        .map(prepare_response)
+        .map(|resp| resp.map(BodyExt::boxed))
+        .map_err(Into::into)
+}
+
+/// Determines the route whose prefix is the longest match for `path` or returns `None` if no route
+/// matches.
+fn resolve<'a>(path: &str, routes: &'a [Route]) -> Option<&'a Route> {
+    routes
+        .iter()
+        .filter(|route| path.starts_with(route.prefix.as_str()))
+        .max_by_key(|route| route.prefix.len())
+}
+
+/// Creates a 404 Not Found response with an empty body.
+fn not_found() -> Result<BoxBodyResp> {
+    Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .body(
+            Empty::<Bytes>::new()
+                .map_err(|infallible| match infallible {})
+                .boxed(),
+        )
+        .map_err(Into::into)
 }
 
 /// Sets X-Forwarded-For to the client IP when absent or appends when present, rewrites Host to the
@@ -109,12 +144,37 @@ fn get_str_val<'a>(headers: &'a HeaderMap, header_name: &HeaderName) -> Option<&
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::localhost_addr;
     use hyper::header::HeaderValue;
     use std::net::{IpAddr, Ipv4Addr};
 
-    const BACKEND_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 8000);
+    const BACKEND_ADDR: SocketAddr = localhost_addr(8000);
     const CLIENT_ADDR: SocketAddr =
         SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)), 12345);
+
+    fn new_test_route(prefix: &str, port: u16) -> Route {
+        Route { prefix: prefix.into(), backend_addr: localhost_addr(port) }
+    }
+
+    #[test]
+    fn resolve_returns_none_when_no_routes_match() {
+        let routes = [new_test_route("/api", 8001)];
+        assert!(resolve("/other", &routes).is_none());
+    }
+
+    #[test]
+    fn resolve_matches_longest_prefix() {
+        let routes = [new_test_route("/", 8000), new_test_route("/api", 8001)];
+        let matched = resolve("/api/v1", &routes);
+        assert_eq!(matched.map(|route| route.backend_addr.port()), Some(8001));
+    }
+
+    #[test]
+    fn resolve_falls_back_to_shorter_prefix() {
+        let routes = [new_test_route("/", 8000), new_test_route("/api", 8001)];
+        let matched = resolve("/other", &routes);
+        assert_eq!(matched.map(|route| route.backend_addr.port()), Some(8000));
+    }
 
     #[test]
     fn strip_removes_standard_hop_by_hop_headers() -> Result<()> {
