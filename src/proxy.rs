@@ -41,7 +41,7 @@ pub async fn forward(
         return not_found();
     };
 
-    let backend_addr = route.backend_addr;
+    let backend_addr = route.backend_addrs.next_addr();
     let prepped_req = prepare_request(req, client_addr, backend_addr)?;
     let io = TokioIo::new(TcpStream::connect(backend_addr).await?);
     let (mut sender, conn) = client_http1::handshake(io).await?;
@@ -152,28 +152,37 @@ mod tests {
     const CLIENT_ADDR: SocketAddr =
         SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)), 12345);
 
-    fn new_test_route(prefix: &str, port: u16) -> Route {
-        Route { prefix: prefix.into(), backend_addr: localhost_addr(port) }
+    fn new_test_route(prefix: &str, port: u16) -> Result<Route> {
+        Ok(Route { prefix: prefix.into(), backend_addrs: vec![localhost_addr(port)].try_into()? })
     }
 
     #[test]
-    fn resolve_returns_none_when_no_routes_match() {
-        let routes = [new_test_route("/api", 8001)];
+    fn resolve_returns_none_when_no_routes_match() -> Result<()> {
+        let routes = [new_test_route("/api", 8001)?];
         assert!(resolve("/other", &routes).is_none());
+        Ok(())
     }
 
     #[test]
-    fn resolve_matches_longest_prefix() {
-        let routes = [new_test_route("/", 8000), new_test_route("/api", 8001)];
+    fn resolve_matches_longest_prefix() -> Result<()> {
+        let routes = [new_test_route("/", 8000)?, new_test_route("/api", 8001)?];
         let matched = resolve("/api/v1", &routes);
-        assert_eq!(matched.map(|route| route.backend_addr.port()), Some(8001));
+        assert_eq!(
+            matched.map(|route| route.backend_addrs.next_addr().port()),
+            Some(8001)
+        );
+        Ok(())
     }
 
     #[test]
-    fn resolve_falls_back_to_shorter_prefix() {
-        let routes = [new_test_route("/", 8000), new_test_route("/api", 8001)];
+    fn resolve_falls_back_to_shorter_prefix() -> Result<()> {
+        let routes = [new_test_route("/", 8000)?, new_test_route("/api", 8001)?];
         let matched = resolve("/other", &routes);
-        assert_eq!(matched.map(|route| route.backend_addr.port()), Some(8000));
+        assert_eq!(
+            matched.map(|route| route.backend_addrs.next_addr().port()),
+            Some(8000)
+        );
+        Ok(())
     }
 
     #[test]

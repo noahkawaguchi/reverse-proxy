@@ -116,12 +116,15 @@ mod tests {
         time::Instant,
     };
 
-    fn new_test_config(backend_addr: SocketAddr, shutdown_timeout: Duration) -> Config {
-        Config {
+    fn new_test_config(backend_addr: SocketAddr, shutdown_timeout: Duration) -> Result<Config> {
+        Ok(Config {
             listen_addr: localhost_addr(0),
-            routes: vec![Route { prefix: String::from("/"), backend_addr }],
+            routes: vec![Route {
+                prefix: String::from("/"),
+                backend_addrs: vec![backend_addr].try_into()?,
+            }],
             shutdown_timeout,
-        }
+        })
     }
 
     /// Spawns a backend that responds to each request after `response_delay`.
@@ -175,7 +178,7 @@ mod tests {
             let proxy_listener = TcpListener::bind("127.0.0.1:0").await?;
             let proxy_addr = proxy_listener.local_addr()?;
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-            let config = new_test_config(backend_addr, Duration::from_secs(2));
+            let config = new_test_config(backend_addr, Duration::from_secs(2))?;
 
             let proxy = tokio::spawn(run(config, proxy_listener, async move {
                 let _ = shutdown_rx.await;
@@ -205,7 +208,7 @@ mod tests {
             let proxy_listener = TcpListener::bind("127.0.0.1:0").await?;
             let proxy_addr = proxy_listener.local_addr()?;
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-            let config = new_test_config(backend_addr, Duration::from_millis(100));
+            let config = new_test_config(backend_addr, Duration::from_millis(100))?;
 
             let proxy = tokio::spawn(run(config, proxy_listener, async move {
                 let _ = shutdown_rx.await;
