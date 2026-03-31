@@ -42,7 +42,7 @@ pub async fn forward(
     };
 
     let Some(backend_addr) = route.backend_addrs.next_addr() else {
-        return bad_gateway();
+        return service_unavailable();
     };
 
     let prepped_req = prepare_request(req, client_addr, backend_addr)?;
@@ -72,10 +72,10 @@ fn resolve<'a>(path: &str, routes: &'a [Route]) -> Option<&'a Route> {
         .max_by_key(|route| route.prefix.len())
 }
 
-/// Creates a 502 Bad Gateway response with an empty body.
-fn bad_gateway() -> Result<BoxBodyResp> {
+/// Creates a 503 Service Unavailable response with an empty body.
+fn service_unavailable() -> Result<BoxBodyResp> {
     Response::builder()
-        .status(StatusCode::BAD_GATEWAY)
+        .status(StatusCode::SERVICE_UNAVAILABLE)
         .body(
             Empty::<Bytes>::new()
                 .map_err(|infallible| match infallible {})

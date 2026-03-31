@@ -270,7 +270,7 @@ mod tests {
     }
 
     #[test]
-    fn returns_502_when_all_backends_unhealthy() -> Result<()> {
+    fn returns_503_when_all_backends_unhealthy() -> Result<()> {
         tokio_test(async {
             // Bind then drop to get an address with nothing listening on it
             let reserved = TcpListener::bind("127.0.0.1:0").await?;
@@ -289,7 +289,10 @@ mod tests {
             // Wait for the health checker to mark the backend unhealthy
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert_eq!(send_request(proxy_addr).await?, StatusCode::BAD_GATEWAY);
+            assert_eq!(
+                send_request(proxy_addr).await?,
+                StatusCode::SERVICE_UNAVAILABLE
+            );
 
             let _ = shutdown_tx.send(());
             proxy.await??;
