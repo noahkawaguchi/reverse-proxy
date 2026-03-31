@@ -1,17 +1,12 @@
+use crate::backend::Backend;
 use anyhow::{Result, bail};
 use std::{
     net::SocketAddr,
     sync::{
         Arc,
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicUsize, Ordering},
     },
 };
-
-/// A backend address paired with its current health state.
-pub struct Backend {
-    pub addr: SocketAddr,
-    pub healthy: AtomicBool,
-}
 
 /// One or more backends to be cycled through for round robin load balancing.
 /// Skips backends whose `healthy` flag is `false`.
@@ -35,14 +30,14 @@ impl RoundRobin {
         let start = self.counter.fetch_add(1, Ordering::Relaxed) % n;
         let mut i = start;
 
-        while !self.backends[i].healthy.load(Ordering::Relaxed) {
+        while !self.backends[i].is_healthy() {
             i = self.counter.fetch_add(1, Ordering::Relaxed) % n;
             if i == start {
                 return None;
             }
         }
 
-        Some(self.backends[i].addr)
+        Some(self.backends[i].addr())
     }
 }
 
@@ -54,7 +49,7 @@ mod tests {
     fn make_healthy_backends(ports: &[u16]) -> Arc<[Backend]> {
         ports
             .iter()
-            .map(|&p| Backend { addr: localhost_addr(p), healthy: AtomicBool::new(true) })
+            .map(|&p| Backend::healthy(localhost_addr(p)))
             .collect::<Vec<_>>()
             .into()
     }
@@ -104,9 +99,9 @@ mod tests {
 
         let rr = RoundRobin::init(
             vec![
-                Backend { addr: a1, healthy: AtomicBool::new(true) },
-                Backend { addr: a2, healthy: AtomicBool::new(false) },
-                Backend { addr: a3, healthy: AtomicBool::new(true) },
+                Backend::healthy(a1),
+                Backend::unhealthy(a2),
+                Backend::healthy(a3),
             ]
             .into(),
         )?;
@@ -124,8 +119,8 @@ mod tests {
     fn returns_none_when_all_unhealthy() -> Result<()> {
         let rr = RoundRobin::init(
             vec![
-                Backend { addr: localhost_addr(8001), healthy: AtomicBool::new(false) },
-                Backend { addr: localhost_addr(8002), healthy: AtomicBool::new(false) },
+                Backend::unhealthy(localhost_addr(8001)),
+                Backend::unhealthy(localhost_addr(8002)),
             ]
             .into(),
         )?;

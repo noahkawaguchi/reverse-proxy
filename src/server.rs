@@ -1,13 +1,14 @@
 use crate::{
+    backend::Backend,
     config::{Config, Route},
     health::HealthChecker,
     proxy,
-    round_robin::{Backend, RoundRobin},
+    round_robin::RoundRobin,
 };
 use anyhow::Result;
 use hyper::{server::conn::http1 as server_http1, service::service_fn};
 use hyper_util::rt::TokioIo;
-use std::sync::{Arc, atomic::AtomicBool};
+use std::sync::Arc;
 use tokio::{net::TcpListener, sync::watch, task::JoinSet, time::timeout};
 use tracing::{error, info, warn};
 
@@ -22,7 +23,7 @@ pub async fn run(
         let backends = route_config
             .backend_addrs
             .into_iter()
-            .map(|addr| Backend { addr, healthy: AtomicBool::new(true) })
+            .map(Backend::healthy) // Assume backends are healthy on startup
             .collect::<Vec<_>>()
             .into();
 

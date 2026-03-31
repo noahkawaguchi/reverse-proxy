@@ -1,12 +1,8 @@
-use crate::round_robin::Backend;
+use crate::backend::Backend;
 use http_body_util::Empty;
 use hyper::{Request, body::Bytes, client::conn::http1 as client_http1, header::HOST};
 use hyper_util::rt::TokioIo;
-use std::{
-    net::SocketAddr,
-    sync::{Arc, atomic::Ordering},
-    time::Duration,
-};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::net::TcpStream;
 use tracing::{info, warn};
 
@@ -27,17 +23,17 @@ impl HealthChecker {
     pub async fn run(self) {
         loop {
             for backend in self.backends.iter() {
-                let is_healthy = self.check_backend(backend.addr).await;
-                let was_healthy = backend.healthy.load(Ordering::Relaxed);
+                let is_healthy = self.check_backend(backend.addr()).await;
+                let was_healthy = backend.is_healthy();
 
                 if is_healthy != was_healthy {
                     if is_healthy {
-                        info!("Backend {} is now healthy", backend.addr);
+                        info!("Backend {} is now healthy", backend.addr());
                     } else {
-                        warn!("Backend {} is now unhealthy", backend.addr);
+                        warn!("Backend {} is now unhealthy", backend.addr());
                     }
 
-                    backend.healthy.store(is_healthy, Ordering::Relaxed);
+                    backend.set_health(is_healthy);
                 }
             }
 
@@ -86,7 +82,7 @@ mod tests {
         Response, StatusCode, body::Bytes, server::conn::http1 as server_http1, service::service_fn,
     };
     use hyper_util::rt::TokioIo;
-    use std::{convert::Infallible, sync::atomic::AtomicBool};
+    use std::convert::Infallible;
     use tokio::net::TcpListener;
 
     /// Spawns an HTTP backend that responds to every request with `status`.
@@ -119,7 +115,9 @@ mod tests {
     }
 
     fn make_checker(addr: SocketAddr, starts_healthy: bool) -> (HealthChecker, Arc<[Backend]>) {
-        let backends = vec![Backend { addr, healthy: AtomicBool::new(starts_healthy) }].into();
+        let backends =
+            vec![if starts_healthy { Backend::healthy(addr) } else { Backend::unhealthy(addr) }]
+                .into();
 
         let checker = HealthChecker::new(
             Arc::clone(&backends),
@@ -141,7 +139,7 @@ mod tests {
             tokio::spawn(checker.run());
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert!(!backends[0].healthy.load(Ordering::Relaxed));
+            assert!(!backends[0].is_healthy());
             Ok(())
         })
     }
@@ -155,7 +153,7 @@ mod tests {
             tokio::spawn(checker.run());
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert!(backends[0].healthy.load(Ordering::Relaxed));
+            assert!(backends[0].is_healthy());
             Ok(())
         })
     }
@@ -169,7 +167,7 @@ mod tests {
             tokio::spawn(checker.run());
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert!(!backends[0].healthy.load(Ordering::Relaxed));
+            assert!(!backends[0].is_healthy());
             Ok(())
         })
     }

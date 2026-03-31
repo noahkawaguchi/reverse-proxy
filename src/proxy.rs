@@ -159,15 +159,9 @@ fn get_str_val<'a>(headers: &'a HeaderMap, header_name: &HeaderName) -> Option<&
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        round_robin::{Backend, RoundRobin},
-        test_utils::localhost_addr,
-    };
+    use crate::{backend::Backend, round_robin::RoundRobin, test_utils::localhost_addr};
     use hyper::header::HeaderValue;
-    use std::{
-        net::{IpAddr, Ipv4Addr},
-        sync::atomic::AtomicBool,
-    };
+    use std::net::{IpAddr, Ipv4Addr};
 
     const BACKEND_ADDR: SocketAddr = localhost_addr(8000);
     const CLIENT_ADDR: SocketAddr =
@@ -176,9 +170,7 @@ mod tests {
     fn new_test_route(prefix: &str, port: u16) -> Result<Route> {
         Ok(Route {
             prefix: prefix.into(),
-            backend_addrs: RoundRobin::init(
-                vec![Backend { addr: localhost_addr(port), healthy: AtomicBool::new(true) }].into(),
-            )?,
+            backend_addrs: RoundRobin::init(vec![Backend::healthy(localhost_addr(port))].into())?,
         })
     }
 
