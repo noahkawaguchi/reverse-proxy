@@ -41,7 +41,10 @@ pub async fn forward(
         return not_found();
     };
 
-    let backend_addr = route.backend_addrs.next_addr();
+    let Some(backend_addr) = route.backend_addrs.next_addr() else {
+        return bad_gateway();
+    };
+
     let prepped_req = prepare_request(req, client_addr, backend_addr)?;
     let io = TokioIo::new(TcpStream::connect(backend_addr).await?);
     let (mut sender, conn) = client_http1::handshake(io).await?;
@@ -67,6 +70,18 @@ fn resolve<'a>(path: &str, routes: &'a [Route]) -> Option<&'a Route> {
         .iter()
         .filter(|route| path.starts_with(route.prefix.as_str()))
         .max_by_key(|route| route.prefix.len())
+}
+
+/// Creates a 502 Bad Gateway response with an empty body.
+fn bad_gateway() -> Result<BoxBodyResp> {
+    Response::builder()
+        .status(StatusCode::BAD_GATEWAY)
+        .body(
+            Empty::<Bytes>::new()
+                .map_err(|infallible| match infallible {})
+                .boxed(),
+        )
+        .map_err(Into::into)
 }
 
 /// Creates a 404 Not Found response with an empty body.
@@ -144,16 +159,27 @@ fn get_str_val<'a>(headers: &'a HeaderMap, header_name: &HeaderName) -> Option<&
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::localhost_addr;
+    use crate::{
+        round_robin::{Backend, RoundRobin},
+        test_utils::localhost_addr,
+    };
     use hyper::header::HeaderValue;
-    use std::net::{IpAddr, Ipv4Addr};
+    use std::{
+        net::{IpAddr, Ipv4Addr},
+        sync::atomic::AtomicBool,
+    };
 
     const BACKEND_ADDR: SocketAddr = localhost_addr(8000);
     const CLIENT_ADDR: SocketAddr =
         SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)), 12345);
 
     fn new_test_route(prefix: &str, port: u16) -> Result<Route> {
-        Ok(Route { prefix: prefix.into(), backend_addrs: vec![localhost_addr(port)].try_into()? })
+        Ok(Route {
+            prefix: prefix.into(),
+            backend_addrs: RoundRobin::init(
+                vec![Backend { addr: localhost_addr(port), healthy: AtomicBool::new(true) }].into(),
+            )?,
+        })
     }
 
     #[test]
@@ -166,22 +192,22 @@ mod tests {
     #[test]
     fn resolve_matches_longest_prefix() -> Result<()> {
         let routes = [new_test_route("/", 8000)?, new_test_route("/api", 8001)?];
-        let matched = resolve("/api/v1", &routes);
-        assert_eq!(
-            matched.map(|route| route.backend_addrs.next_addr().port()),
-            Some(8001)
-        );
+        let matched = resolve("/api/v1", &routes)
+            .and_then(|route| route.backend_addrs.next_addr())
+            .map(|a| a.port());
+
+        assert_eq!(matched, Some(8001));
         Ok(())
     }
 
     #[test]
     fn resolve_falls_back_to_shorter_prefix() -> Result<()> {
         let routes = [new_test_route("/", 8000)?, new_test_route("/api", 8001)?];
-        let matched = resolve("/other", &routes);
-        assert_eq!(
-            matched.map(|route| route.backend_addrs.next_addr().port()),
-            Some(8000)
-        );
+        let matched = resolve("/other", &routes)
+            .and_then(|route| route.backend_addrs.next_addr())
+            .map(|a| a.port());
+
+        assert_eq!(matched, Some(8000));
         Ok(())
     }
 

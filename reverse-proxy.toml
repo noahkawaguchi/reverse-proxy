@@ -4,3 +4,4 @@ shutdown_timeout = 10
 [[routes]]
 prefix = "/"
 backend_addrs = ["127.0.0.1:8000"]
+health_check = { path = "/health", interval_secs = 10 }

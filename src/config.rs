@@ -3,12 +3,26 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Deserializer};
 use std::{env, fs, net::SocketAddr, time::Duration};
 
-/// Deserializes a `u64` representing seconds into a `Duration`.
-fn deserialize_duration_secs<'de, D: Deserializer<'de>>(d: D) -> Result<Duration, D::Error> {
-    u64::deserialize(d).map(Duration::from_secs)
+#[derive(Deserialize)]
+pub struct HealthCheckConfig {
+    pub path: String,
+
+    #[serde(
+        rename = "interval_secs",
+        deserialize_with = "deserialize_duration_secs"
+    )]
+    pub interval: Duration,
 }
 
+/// Serde-facing route config, deserialized directly from TOML.
 #[derive(Deserialize)]
+pub struct RouteConfig {
+    pub prefix: String,
+    pub backend_addrs: Vec<SocketAddr>,
+    pub health_check: HealthCheckConfig,
+}
+
+/// Runtime route, built from a `RouteConfig` after deserialization.
 pub struct Route {
     pub prefix: String,
     pub backend_addrs: RoundRobin,
@@ -17,7 +31,7 @@ pub struct Route {
 #[derive(Deserialize)]
 pub struct Config {
     pub listen_addr: SocketAddr,
-    pub routes: Vec<Route>,
+    pub routes: Vec<RouteConfig>,
 
     #[serde(deserialize_with = "deserialize_duration_secs")]
     pub shutdown_timeout: Duration,
@@ -33,4 +47,9 @@ impl Config {
 
         toml::from_str(&contents).context("failed to parse config file")
     }
+}
+
+/// Deserializes a `u64` representing seconds into a `Duration`.
+fn deserialize_duration_secs<'de, D: Deserializer<'de>>(d: D) -> Result<Duration, D::Error> {
+    u64::deserialize(d).map(Duration::from_secs)
 }

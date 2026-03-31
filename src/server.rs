@@ -1,8 +1,13 @@
-use crate::{config::Config, proxy};
+use crate::{
+    config::{Config, Route},
+    health::HealthChecker,
+    proxy,
+    round_robin::{Backend, RoundRobin},
+};
 use anyhow::Result;
 use hyper::{server::conn::http1 as server_http1, service::service_fn};
 use hyper_util::rt::TokioIo;
-use std::sync::Arc;
+use std::sync::{Arc, atomic::AtomicBool};
 use tokio::{net::TcpListener, sync::watch, task::JoinSet, time::timeout};
 use tracing::{error, info, warn};
 
@@ -11,7 +16,31 @@ pub async fn run(
     listener: TcpListener,
     shutdown_signal: impl Future<Output = ()>,
 ) -> Result<()> {
-    let routes = Arc::<[_]>::from(config.routes);
+    let mut runtime_routes = Vec::with_capacity(config.routes.len());
+
+    for route_config in config.routes {
+        let backends = route_config
+            .backend_addrs
+            .into_iter()
+            .map(|addr| Backend { addr, healthy: AtomicBool::new(true) })
+            .collect::<Vec<_>>()
+            .into();
+
+        let backend_addrs = RoundRobin::init(Arc::clone(&backends))?;
+
+        tokio::spawn(
+            HealthChecker::new(
+                backends,
+                route_config.health_check.path,
+                route_config.health_check.interval,
+            )
+            .run(),
+        );
+
+        runtime_routes.push(Route { prefix: route_config.prefix, backend_addrs });
+    }
+
+    let routes = Arc::<[_]>::from(runtime_routes);
 
     info!(
         "Listening on {} with {} route(s)",
@@ -100,7 +129,7 @@ pub async fn run(
 mod tests {
     use super::*;
     use crate::{
-        config::{Config, Route},
+        config::{Config, HealthCheckConfig, RouteConfig},
         test_utils::{localhost_addr, tokio_test},
     };
     use http_body_util::{Empty, Full};
@@ -116,15 +145,19 @@ mod tests {
         time::Instant,
     };
 
-    fn new_test_config(backend_addr: SocketAddr, shutdown_timeout: Duration) -> Result<Config> {
-        Ok(Config {
+    fn new_test_config(backend_addr: SocketAddr, shutdown_timeout: Duration) -> Config {
+        Config {
             listen_addr: localhost_addr(0),
-            routes: vec![Route {
+            routes: vec![RouteConfig {
                 prefix: String::from("/"),
-                backend_addrs: vec![backend_addr].try_into()?,
+                backend_addrs: vec![backend_addr],
+                health_check: HealthCheckConfig {
+                    path: String::from("/"),
+                    interval: Duration::from_secs(10),
+                },
             }],
             shutdown_timeout,
-        })
+        }
     }
 
     /// Spawns a backend that responds to each request after `response_delay`.
@@ -178,7 +211,7 @@ mod tests {
             let proxy_listener = TcpListener::bind("127.0.0.1:0").await?;
             let proxy_addr = proxy_listener.local_addr()?;
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-            let config = new_test_config(backend_addr, Duration::from_secs(2))?;
+            let config = new_test_config(backend_addr, Duration::from_secs(2));
 
             let proxy = tokio::spawn(run(config, proxy_listener, async move {
                 let _ = shutdown_rx.await;
@@ -208,7 +241,7 @@ mod tests {
             let proxy_listener = TcpListener::bind("127.0.0.1:0").await?;
             let proxy_addr = proxy_listener.local_addr()?;
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-            let config = new_test_config(backend_addr, Duration::from_millis(100))?;
+            let config = new_test_config(backend_addr, Duration::from_millis(100));
 
             let proxy = tokio::spawn(run(config, proxy_listener, async move {
                 let _ = shutdown_rx.await;
@@ -230,6 +263,35 @@ mod tests {
                 elapsed < Duration::from_millis(150),
                 "expected proxy to exit near the 100ms timeout, took {elapsed:?}"
             );
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn returns_502_when_all_backends_unhealthy() -> Result<()> {
+        tokio_test(async {
+            // Bind then drop to get an address with nothing listening on it
+            let reserved = TcpListener::bind("127.0.0.1:0").await?;
+            let backend_addr = reserved.local_addr()?;
+            drop(reserved);
+
+            let proxy_listener = TcpListener::bind("127.0.0.1:0").await?;
+            let proxy_addr = proxy_listener.local_addr()?;
+            let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+            let config = new_test_config(backend_addr, Duration::from_secs(1));
+
+            let proxy = tokio::spawn(run(config, proxy_listener, async move {
+                let _ = shutdown_rx.await;
+            }));
+
+            // Wait for the health checker to mark the backend unhealthy
+            tokio::time::sleep(Duration::from_millis(200)).await;
+
+            assert_eq!(send_request(proxy_addr).await?, StatusCode::BAD_GATEWAY);
+
+            let _ = shutdown_tx.send(());
+            proxy.await??;
 
             Ok(())
         })
