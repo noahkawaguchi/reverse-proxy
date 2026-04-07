@@ -45,15 +45,7 @@ impl LoadBalancer for RoundRobin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::localhost_addr;
-
-    fn make_healthy_backends(ports: &[u16]) -> Arc<[Backend]> {
-        ports
-            .iter()
-            .map(|&p| Backend::healthy(localhost_addr(p)))
-            .collect::<Vec<_>>()
-            .into()
-    }
+    use crate::test_utils::{localhost_addr, make_healthy_backends};
 
     #[test]
     fn cycles_through_backends_in_order() -> Result<()> {

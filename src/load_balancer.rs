@@ -6,8 +6,8 @@ use std::{
     },
 };
 
-/// A handle to a chosen backend address. For load balancers that track in-flight connections, the
-/// counter is decremented when this guard is dropped.
+/// A handle to a chosen backend. Decrements the backend's active connection count on drop if
+/// connection tracking is enabled.
 pub struct BackendGuard {
     addr: SocketAddr,
     counter: Option<Arc<AtomicUsize>>,
@@ -16,8 +16,9 @@ pub struct BackendGuard {
 impl BackendGuard {
     pub const fn new(addr: SocketAddr) -> Self { Self { addr, counter: None } }
 
-    #[expect(dead_code, reason = "used by LeastConnections, not yet implemented")]
-    pub const fn with_counter(counter: Arc<AtomicUsize>, addr: SocketAddr) -> Self {
+    /// Increments the backend's connection count and returns a guard that decrements it on drop.
+    pub fn tracking(addr: SocketAddr, counter: Arc<AtomicUsize>) -> Self {
+        counter.fetch_add(1, Ordering::Relaxed);
         Self { addr, counter: Some(counter) }
     }
 

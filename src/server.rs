@@ -2,6 +2,8 @@ use crate::{
     backend::Backend,
     config::{BalancingAlgorithm, Config, Route},
     health::HealthChecker,
+    least_connections::LeastConnections,
+    load_balancer::LoadBalancer,
     proxy,
     round_robin::RoundRobin,
 };
@@ -27,9 +29,11 @@ pub async fn run(
             .collect::<Vec<_>>()
             .into();
 
-        let balancer = match route_config.balancing_algorithm {
+        let balancer: Box<dyn LoadBalancer> = match route_config.balancing_algorithm {
             BalancingAlgorithm::RoundRobin => Box::new(RoundRobin::init(Arc::clone(&backends))?),
-            BalancingAlgorithm::LeastConnections => todo!("least connections not yet implemented"),
+            BalancingAlgorithm::LeastConnections => {
+                Box::new(LeastConnections::init(Arc::clone(&backends))?)
+            }
         };
 
         tokio::spawn(

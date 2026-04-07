@@ -1,6 +1,7 @@
 mod backend;
 mod config;
 mod health;
+mod least_connections;
 mod load_balancer;
 mod logger;
 mod proxy;

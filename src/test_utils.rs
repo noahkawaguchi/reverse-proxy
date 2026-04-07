@@ -1,5 +1,9 @@
+use crate::backend::Backend;
 use anyhow::{Context, Result};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 
 /// Replaces `#[tokio::test]`, not inserting `#[allow(clippy::expect_used)]`.
 ///
@@ -16,4 +20,13 @@ pub fn tokio_test<F: Future<Output = Result<()>>>(f: F) -> Result<()> {
 /// Creates a new localhost `SocketAddr` with the provided port.
 pub const fn localhost_addr(port: u16) -> SocketAddr {
     SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port)
+}
+
+/// Creates healthy localhost backends from port numbers.
+pub fn make_healthy_backends(ports: &[u16]) -> Arc<[Backend]> {
+    ports
+        .iter()
+        .map(|&p| Backend::healthy(localhost_addr(p)))
+        .collect::<Vec<_>>()
+        .into()
 }
