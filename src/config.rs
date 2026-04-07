@@ -14,18 +14,26 @@ pub struct HealthCheckConfig {
     pub interval: Duration,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BalancingAlgorithm {
+    RoundRobin,
+    LeastConnections,
+}
+
 /// Serde-facing route config, deserialized directly from TOML.
 #[derive(Deserialize)]
 pub struct RouteConfig {
     pub prefix: String,
     pub backend_addrs: Vec<SocketAddr>,
     pub health_check: HealthCheckConfig,
+    pub balancing_algorithm: BalancingAlgorithm,
 }
 
 /// Runtime route, built from a `RouteConfig` after deserialization.
 pub struct Route {
     pub prefix: String,
-    pub backends: Box<dyn LoadBalancer>,
+    pub balancer: Box<dyn LoadBalancer>,
 }
 
 #[derive(Deserialize)]

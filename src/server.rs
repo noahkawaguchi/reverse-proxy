@@ -1,6 +1,6 @@
 use crate::{
     backend::Backend,
-    config::{Config, Route},
+    config::{BalancingAlgorithm, Config, Route},
     health::HealthChecker,
     proxy,
     round_robin::RoundRobin,
@@ -27,7 +27,10 @@ pub async fn run(
             .collect::<Vec<_>>()
             .into();
 
-        let backend_addrs = Box::new(RoundRobin::init(Arc::clone(&backends))?);
+        let balancer = match route_config.balancing_algorithm {
+            BalancingAlgorithm::RoundRobin => Box::new(RoundRobin::init(Arc::clone(&backends))?),
+            BalancingAlgorithm::LeastConnections => todo!("least connections not yet implemented"),
+        };
 
         tokio::spawn(
             HealthChecker::new(
@@ -38,7 +41,7 @@ pub async fn run(
             .run(),
         );
 
-        runtime_routes.push(Route { prefix: route_config.prefix, backends: backend_addrs });
+        runtime_routes.push(Route { prefix: route_config.prefix, balancer });
     }
 
     let routes = Arc::<[_]>::from(runtime_routes);
@@ -130,7 +133,7 @@ pub async fn run(
 mod tests {
     use super::*;
     use crate::{
-        config::{Config, HealthCheckConfig, RouteConfig},
+        config::{HealthCheckConfig, RouteConfig},
         test_utils::{localhost_addr, tokio_test},
     };
     use http_body_util::{Empty, Full};
@@ -156,6 +159,7 @@ mod tests {
                     path: String::from("/"),
                     interval: Duration::from_secs(10),
                 },
+                balancing_algorithm: BalancingAlgorithm::RoundRobin,
             }],
             shutdown_timeout,
         }
