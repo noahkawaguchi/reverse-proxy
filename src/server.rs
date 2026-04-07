@@ -27,7 +27,7 @@ pub async fn run(
             .collect::<Vec<_>>()
             .into();
 
-        let backend_addrs = RoundRobin::init(Arc::clone(&backends))?;
+        let backend_addrs = Box::new(RoundRobin::init(Arc::clone(&backends))?);
 
         tokio::spawn(
             HealthChecker::new(
@@ -38,7 +38,7 @@ pub async fn run(
             .run(),
         );
 
-        runtime_routes.push(Route { prefix: route_config.prefix, backend_addrs });
+        runtime_routes.push(Route { prefix: route_config.prefix, backends: backend_addrs });
     }
 
     let routes = Arc::<[_]>::from(runtime_routes);

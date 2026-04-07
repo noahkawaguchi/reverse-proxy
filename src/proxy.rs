@@ -41,9 +41,11 @@ pub async fn forward(
         return not_found();
     };
 
-    let Some(backend_addr) = route.backend_addrs.next_addr() else {
+    let Some(guard) = route.backends.next() else {
         return service_unavailable();
     };
+
+    let backend_addr = guard.addr();
 
     let prepped_req = prepare_request(req, client_addr, backend_addr)?;
     let io = TokioIo::new(TcpStream::connect(backend_addr).await?);
@@ -170,7 +172,9 @@ mod tests {
     fn new_test_route(prefix: &str, port: u16) -> Result<Route> {
         Ok(Route {
             prefix: prefix.into(),
-            backend_addrs: RoundRobin::init(vec![Backend::healthy(localhost_addr(port))].into())?,
+            backends: Box::new(RoundRobin::init(
+                vec![Backend::healthy(localhost_addr(port))].into(),
+            )?),
         })
     }
 
@@ -185,8 +189,8 @@ mod tests {
     fn resolve_matches_longest_prefix() -> Result<()> {
         let routes = [new_test_route("/", 8000)?, new_test_route("/api", 8001)?];
         let matched = resolve("/api/v1", &routes)
-            .and_then(|route| route.backend_addrs.next_addr())
-            .map(|a| a.port());
+            .and_then(|route| route.backends.next())
+            .map(|g| g.addr().port());
 
         assert_eq!(matched, Some(8001));
         Ok(())
@@ -196,8 +200,8 @@ mod tests {
     fn resolve_falls_back_to_shorter_prefix() -> Result<()> {
         let routes = [new_test_route("/", 8000)?, new_test_route("/api", 8001)?];
         let matched = resolve("/other", &routes)
-            .and_then(|route| route.backend_addrs.next_addr())
-            .map(|a| a.port());
+            .and_then(|route| route.backends.next())
+            .map(|g| g.addr().port());
 
         assert_eq!(matched, Some(8000));
         Ok(())

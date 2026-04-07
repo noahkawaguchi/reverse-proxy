@@ -1,6 +1,7 @@
 mod backend;
 mod config;
 mod health;
+mod load_balancer;
 mod logger;
 mod proxy;
 mod round_robin;

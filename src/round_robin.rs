@@ -1,11 +1,11 @@
-use crate::backend::Backend;
+use crate::{
+    backend::Backend,
+    load_balancer::{BackendGuard, LoadBalancer},
+};
 use anyhow::{Result, bail};
-use std::{
-    net::SocketAddr,
-    sync::{
-        Arc,
-        atomic::{AtomicUsize, Ordering},
-    },
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
 };
 
 /// One or more backends to be cycled through for round robin load balancing.
@@ -23,9 +23,10 @@ impl RoundRobin {
 
         Ok(Self { backends, counter: AtomicUsize::new(0) })
     }
+}
 
-    /// Returns the next healthy backend address, or `None` if all backends are unhealthy.
-    pub fn next_addr(&self) -> Option<SocketAddr> {
+impl LoadBalancer for RoundRobin {
+    fn next(&self) -> Option<BackendGuard> {
         let n = self.backends.len();
         let start = self.counter.fetch_add(1, Ordering::Relaxed) % n;
         let mut i = start;
@@ -37,7 +38,7 @@ impl RoundRobin {
             }
         }
 
-        Some(self.backends[i].addr())
+        Some(BackendGuard::new(self.backends[i].addr()))
     }
 }
 
@@ -64,10 +65,10 @@ mod tests {
 
         let rr = RoundRobin::init(make_healthy_backends(&[8001, 8002, 8003]))?;
 
-        assert_eq!(rr.next_addr(), Some(a1));
-        assert_eq!(rr.next_addr(), Some(a2));
-        assert_eq!(rr.next_addr(), Some(a3));
-        assert_eq!(rr.next_addr(), Some(a1));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(a1));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(a2));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(a3));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(a1));
 
         Ok(())
     }
@@ -77,9 +78,9 @@ mod tests {
         let addr = localhost_addr(8001);
         let rr = RoundRobin::init(make_healthy_backends(&[8001]))?;
 
-        assert_eq!(rr.next_addr(), Some(addr));
-        assert_eq!(rr.next_addr(), Some(addr));
-        assert_eq!(rr.next_addr(), Some(addr));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(addr));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(addr));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(addr));
 
         Ok(())
     }
@@ -107,10 +108,10 @@ mod tests {
         )?;
 
         // Should alternate between a1 and a3 with a2 unhealthy
-        assert_eq!(rr.next_addr(), Some(a1));
-        assert_eq!(rr.next_addr(), Some(a3));
-        assert_eq!(rr.next_addr(), Some(a1));
-        assert_eq!(rr.next_addr(), Some(a3));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(a1));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(a3));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(a1));
+        assert_eq!(rr.next().map(|g| g.addr()), Some(a3));
 
         Ok(())
     }
@@ -125,8 +126,8 @@ mod tests {
             .into(),
         )?;
 
-        assert_eq!(rr.next_addr(), None);
-        assert_eq!(rr.next_addr(), None);
+        assert!(rr.next().is_none());
+        assert!(rr.next().is_none());
 
         Ok(())
     }

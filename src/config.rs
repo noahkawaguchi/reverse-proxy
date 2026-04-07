@@ -1,4 +1,4 @@
-use crate::round_robin::RoundRobin;
+use crate::load_balancer::LoadBalancer;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Deserializer};
 use std::{env, fs, net::SocketAddr, time::Duration};
@@ -25,7 +25,7 @@ pub struct RouteConfig {
 /// Runtime route, built from a `RouteConfig` after deserialization.
 pub struct Route {
     pub prefix: String,
-    pub backend_addrs: RoundRobin,
+    pub backends: Box<dyn LoadBalancer>,
 }
 
 #[derive(Deserialize)]
