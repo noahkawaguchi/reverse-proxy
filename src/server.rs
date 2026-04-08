@@ -25,14 +25,13 @@ pub async fn run(
         let backends = route_config
             .backend_addrs
             .into_iter()
-            .map(Backend::healthy) // Assume backends are healthy on startup
-            .collect::<Vec<_>>()
-            .into();
+            .map(|addr| Arc::new(Backend::healthy(addr))) // Assume backends are healthy on startup
+            .collect::<Vec<_>>();
 
         let balancer: Box<dyn LoadBalancer> = match route_config.balancing_algorithm {
-            BalancingAlgorithm::RoundRobin => Box::new(RoundRobin::init(Arc::clone(&backends))?),
+            BalancingAlgorithm::RoundRobin => Box::new(RoundRobin::init(backends.clone())?),
             BalancingAlgorithm::LeastConnections => {
-                Box::new(LeastConnections::init(Arc::clone(&backends))?)
+                Box::new(LeastConnections::init(backends.clone())?)
             }
         };
 

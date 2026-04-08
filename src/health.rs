@@ -10,19 +10,19 @@ use tracing::{info, warn};
 const HEALTH_CHECK_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub struct HealthChecker {
-    backends: Arc<[Backend]>,
+    backends: Vec<Arc<Backend>>,
     path: String,
     interval: Duration,
 }
 
 impl HealthChecker {
-    pub const fn new(backends: Arc<[Backend]>, path: String, interval: Duration) -> Self {
+    pub const fn new(backends: Vec<Arc<Backend>>, path: String, interval: Duration) -> Self {
         Self { backends, path, interval }
     }
 
     pub async fn run(self) {
         loop {
-            for backend in self.backends.iter() {
+            for backend in &self.backends {
                 let is_healthy = self.check_backend(backend.addr()).await;
                 let was_healthy = backend.is_healthy();
 
@@ -114,13 +114,15 @@ mod tests {
         Ok(addr)
     }
 
-    fn make_checker(addr: SocketAddr, starts_healthy: bool) -> (HealthChecker, Arc<[Backend]>) {
-        let backends =
-            vec![if starts_healthy { Backend::healthy(addr) } else { Backend::unhealthy(addr) }]
-                .into();
+    fn make_checker(addr: SocketAddr, starts_healthy: bool) -> (HealthChecker, Vec<Arc<Backend>>) {
+        let backends = vec![Arc::new(if starts_healthy {
+            Backend::healthy(addr)
+        } else {
+            Backend::unhealthy(addr)
+        })];
 
         let checker = HealthChecker::new(
-            Arc::clone(&backends),
+            backends.clone(),
             String::from("/"),
             Duration::from_millis(20),
         );

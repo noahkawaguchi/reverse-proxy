@@ -1,6 +1,6 @@
 use crate::{
-    backend::Backend,
-    load_balancer::{BackendGuard, LoadBalancer},
+    backend::{Backend, BackendGuard},
+    load_balancer::LoadBalancer,
 };
 use anyhow::{Result, bail};
 use std::sync::{
@@ -11,12 +11,12 @@ use std::sync::{
 /// One or more backends to be cycled through for round robin load balancing.
 /// Skips backends whose `healthy` flag is `false`.
 pub struct RoundRobin {
-    backends: Arc<[Backend]>,
+    backends: Vec<Arc<Backend>>,
     counter: AtomicUsize,
 }
 
 impl RoundRobin {
-    pub fn init(backends: Arc<[Backend]>) -> Result<Self> {
+    pub fn init(backends: Vec<Arc<Backend>>) -> Result<Self> {
         if backends.is_empty() {
             bail!("route must have at least one backend address");
         }
@@ -38,7 +38,7 @@ impl LoadBalancer for RoundRobin {
             }
         }
 
-        Some(BackendGuard::new(self.backends[i].addr()))
+        Some(Arc::clone(&self.backends[i]).acquire())
     }
 }
 
@@ -90,14 +90,11 @@ mod tests {
             localhost_addr(8003),
         );
 
-        let rr = RoundRobin::init(
-            vec![
-                Backend::healthy(a1),
-                Backend::unhealthy(a2),
-                Backend::healthy(a3),
-            ]
-            .into(),
-        )?;
+        let rr = RoundRobin::init(vec![
+            Arc::new(Backend::healthy(a1)),
+            Arc::new(Backend::unhealthy(a2)),
+            Arc::new(Backend::healthy(a3)),
+        ])?;
 
         // Should alternate between a1 and a3 with a2 unhealthy
         assert_eq!(rr.next().map(|g| g.addr()), Some(a1));
@@ -110,13 +107,10 @@ mod tests {
 
     #[test]
     fn returns_none_when_all_unhealthy() -> Result<()> {
-        let rr = RoundRobin::init(
-            vec![
-                Backend::unhealthy(localhost_addr(8001)),
-                Backend::unhealthy(localhost_addr(8002)),
-            ]
-            .into(),
-        )?;
+        let rr = RoundRobin::init(vec![
+            Arc::new(Backend::unhealthy(localhost_addr(8001))),
+            Arc::new(Backend::unhealthy(localhost_addr(8002))),
+        ])?;
 
         assert!(rr.next().is_none());
         assert!(rr.next().is_none());

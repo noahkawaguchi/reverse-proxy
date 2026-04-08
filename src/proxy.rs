@@ -172,9 +172,9 @@ mod tests {
     fn new_test_route(prefix: &str, port: u16) -> Result<Route> {
         Ok(Route {
             prefix: prefix.into(),
-            balancer: Box::new(RoundRobin::init(
-                vec![Backend::healthy(localhost_addr(port))].into(),
-            )?),
+            balancer: Box::new(RoundRobin::init(vec![Arc::new(Backend::healthy(
+                localhost_addr(port),
+            ))])?),
         })
     }
 
