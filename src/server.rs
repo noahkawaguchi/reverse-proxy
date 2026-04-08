@@ -2,10 +2,8 @@ use crate::{
     backend::Backend,
     config::{BalancingAlgorithm, Config, Route},
     health::HealthChecker,
-    least_connections::LeastConnections,
-    load_balancer::LoadBalancer,
+    load_balancer::{LoadBalancer, least_connections::LeastConnections, round_robin::RoundRobin},
     proxy,
-    round_robin::RoundRobin,
 };
 use anyhow::Result;
 use hyper::{server::conn::http1 as server_http1, service::service_fn};

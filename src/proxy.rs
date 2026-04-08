@@ -161,7 +161,9 @@ fn get_str_val<'a>(headers: &'a HeaderMap, header_name: &HeaderName) -> Option<&
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{backend::Backend, round_robin::RoundRobin, test_utils::localhost_addr};
+    use crate::{
+        backend::Backend, load_balancer::round_robin::RoundRobin, test_utils::localhost_addr,
+    };
     use hyper::header::HeaderValue;
     use std::net::{IpAddr, Ipv4Addr};
 
