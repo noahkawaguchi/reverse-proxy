@@ -17,35 +17,37 @@ pub async fn run(
     listener: TcpListener,
     shutdown_signal: impl Future<Output = ()>,
 ) -> Result<()> {
-    let mut runtime_routes = Vec::with_capacity(config.routes.len());
+    let routes: Arc<[_]> = config
+        .routes
+        .into_iter()
+        .map(|route_config| {
+            let backends = route_config
+                .backend_addrs
+                .into_iter()
+                // Assume backends are healthy on startup
+                .map(|addr| Arc::new(Backend::healthy(addr)))
+                .collect::<Vec<_>>();
 
-    for route_config in config.routes {
-        let backends = route_config
-            .backend_addrs
-            .into_iter()
-            .map(|addr| Arc::new(Backend::healthy(addr))) // Assume backends are healthy on startup
-            .collect::<Vec<_>>();
+            let balancer: Box<dyn LoadBalancer> = match route_config.balancing_algorithm {
+                BalancingAlgorithm::RoundRobin => Box::new(RoundRobin::init(backends.clone())?),
+                BalancingAlgorithm::LeastConnections => {
+                    Box::new(LeastConnections::init(backends.clone())?)
+                }
+            };
 
-        let balancer: Box<dyn LoadBalancer> = match route_config.balancing_algorithm {
-            BalancingAlgorithm::RoundRobin => Box::new(RoundRobin::init(backends.clone())?),
-            BalancingAlgorithm::LeastConnections => {
-                Box::new(LeastConnections::init(backends.clone())?)
-            }
-        };
+            tokio::spawn(
+                HealthChecker::new(
+                    backends,
+                    route_config.health_check.path,
+                    route_config.health_check.interval,
+                )
+                .run(),
+            );
 
-        tokio::spawn(
-            HealthChecker::new(
-                backends,
-                route_config.health_check.path,
-                route_config.health_check.interval,
-            )
-            .run(),
-        );
-
-        runtime_routes.push(Route { prefix: route_config.prefix, balancer });
-    }
-
-    let routes = Arc::<[_]>::from(runtime_routes);
+            Ok(Route { prefix: route_config.prefix, balancer })
+        })
+        .collect::<Result<Vec<_>>>()?
+        .into();
 
     info!(
         "Listening on {} with {} route(s)",
