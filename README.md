@@ -1,3 +1,5 @@
+[English](README.md) | [日本語](README.ja.md)
+
 # reverse-proxy
 
 An HTTP reverse proxy written in Rust. Supports multiple backends per route, two load balancing algorithms, periodic health checks, and graceful shutdown.
