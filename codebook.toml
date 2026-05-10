@@ -1,0 +1,15 @@
+words = [
+    "addrs",
+    "backend's",
+    "clippy",
+    "dtolnay",
+    "lossy",
+    "raii",
+    "rustfmt",
+    "swatinem",
+    "tokio",
+]
+ignore_paths = [
+    "target/**/*",
+    "Cargo.lock",
+]
