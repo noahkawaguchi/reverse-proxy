@@ -86,4 +86,4 @@ cargo test
 
 ## CI
 
-`main`ブランチへのプッシュおよびプルリクエスト時に、GitHub Actionsでテスト、リント、フォーマット確認、スペルチェックが実行されます（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)参照）。
+`main`ブランチへのプッシュおよびプルリクエスト時に、GitHub Actionsでテスト・リント・フォーマット確認が実行されます（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)参照）。
