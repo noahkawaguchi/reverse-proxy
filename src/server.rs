@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn exits_after_timeout_with_hung_connection() -> Result<()> {
         tokio_test(async {
-            let backend_addr = spawn_test_backend(Duration::from_secs(60)).await?;
+            let backend_addr = spawn_test_backend(Duration::from_mins(1)).await?;
 
             let proxy_listener = TcpListener::bind("127.0.0.1:0").await?;
             let proxy_addr = proxy_listener.local_addr()?;
