@@ -86,4 +86,4 @@ Tests cover route resolution, header handling, health detection and recovery, lo
 
 ## CI
 
-Tests, linting, and format checking run via GitHub Actions on pushes and pull requests to `main` (as defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+Tests, linting, format checking, and spell checking run via GitHub Actions on pushes and pull requests to `main` (as defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).

@@ -3,13 +3,11 @@ words = [
     "backend's",
     "clippy",
     "dtolnay",
+    "fdfind",
     "lossy",
     "raii",
     "rustfmt",
     "swatinem",
     "tokio",
 ]
-ignore_paths = [
-    "target/**/*",
-    "Cargo.lock",
-]
+ignore_paths = ["Cargo.lock"]
