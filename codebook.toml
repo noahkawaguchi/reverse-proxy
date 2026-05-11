@@ -9,5 +9,7 @@ words = [
     "rustfmt",
     "swatinem",
     "tokio",
+    "xzf",
 ]
 ignore_paths = ["Cargo.lock"]
+ignore_patterns = ['\b[a-fA-F0-9]{64}\b']

@@ -31,11 +31,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with: { persist-credentials: false }
-      - run: |
-          sudo apt-get update
-          sudo apt-get install -y fd-find
-          curl -L https://github.com/blopker/codebook/releases/download/v0.3.39/codebook-lsp-aarch64-unknown-linux-musl.tar.gz | tar -xz
-          ./codebook-lsp lint $(fdfind --hidden --exclude .git --type file)
+
+      - name: Install fd
+        run: sudo apt-get update && sudo apt-get install -y fd-find
+
+      - name: Download Codebook
+        env:
+          CODEBOOK_VERSION: v0.3.39
+          CODEBOOK_SHA256: 38302c6e719ce67083e9229c373943ebe45aa359a7a2cfb06e48221c33b59516
+        run: |
+          curl -Lo codebook.tar.gz "https://github.com/blopker/codebook/releases/download/${CODEBOOK_VERSION}/codebook-lsp-aarch64-unknown-linux-musl.tar.gz"
+          echo "$CODEBOOK_SHA256  codebook.tar.gz" | sha256sum -c
+          tar -xzf codebook.tar.gz -C "$RUNNER_TEMP"
+
+      - name: Check spelling
+        run: |
+          "$RUNNER_TEMP/codebook-lsp" lint $(fdfind --hidden --exclude .git --type file)
 
   test:
     runs-on: ubuntu-24.04-arm
