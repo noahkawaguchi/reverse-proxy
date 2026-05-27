@@ -48,9 +48,7 @@ impl HealthChecker {
                 return false;
             };
 
-            tokio::spawn(async move {
-                let _ = conn.await;
-            });
+            tokio::spawn(async move { assert!(conn.await.is_ok()) });
 
             let Ok(req) = Request::builder()
                 .uri(&self.path)
@@ -95,18 +93,21 @@ mod tests {
                 let Ok((stream, _)) = listener.accept().await else { break };
 
                 tokio::spawn(async move {
-                    let _ = server_http1::Builder::new()
-                        .serve_connection(
-                            TokioIo::new(stream),
-                            service_fn(async |_| {
-                                let resp = Response::builder()
-                                    .status(status)
-                                    .body(Full::new(Bytes::new()))
-                                    .unwrap_or_else(|_| Response::new(Full::new(Bytes::new())));
-                                Ok::<_, Infallible>(resp)
-                            }),
-                        )
-                        .await;
+                    assert!(
+                        server_http1::Builder::new()
+                            .serve_connection(
+                                TokioIo::new(stream),
+                                service_fn(async |_| {
+                                    let resp = Response::builder()
+                                        .status(status)
+                                        .body(Full::new(Bytes::new()))
+                                        .unwrap_or_else(|_| Response::new(Full::new(Bytes::new())));
+                                    Ok::<_, Infallible>(resp)
+                                }),
+                            )
+                            .await
+                            .is_ok()
+                    );
                 });
             }
         });
