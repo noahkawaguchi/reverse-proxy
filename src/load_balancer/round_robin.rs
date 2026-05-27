@@ -35,14 +35,14 @@ impl LoadBalancer for RoundRobin {
         let start = self.counter.fetch_add(1, Ordering::Relaxed) % n;
         let mut i = start;
 
-        while !self.backends[i].is_healthy() {
+        while !self.backends.get(i)?.is_healthy() {
             i = self.counter.fetch_add(1, Ordering::Relaxed) % n;
             if i == start {
                 return None;
             }
         }
 
-        Some(Arc::clone(&self.backends[i]).acquire())
+        Some(Arc::clone(self.backends.get(i).as_ref()?).acquire())
     }
 }
 

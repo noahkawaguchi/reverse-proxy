@@ -41,7 +41,7 @@ impl LoadBalancer for LeastConnections {
 
         let &idx = tied.choose(&mut rand::rng())?;
 
-        Some(Arc::clone(&self.backends[idx]).acquire())
+        Some(Arc::clone(self.backends.get(idx).as_ref()?).acquire())
     }
 }
 
