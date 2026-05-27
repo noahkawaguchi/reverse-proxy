@@ -26,6 +26,10 @@ impl RoundRobin {
 }
 
 impl LoadBalancer for RoundRobin {
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "Wrapping desired for round robin counter"
+    )]
     fn next(&self) -> Option<BackendGuard> {
         let n = self.backends.len();
         let start = self.counter.fetch_add(1, Ordering::Relaxed) % n;
