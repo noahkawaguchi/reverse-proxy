@@ -139,7 +139,7 @@ mod tests {
             tokio::spawn(checker.run());
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert!(!backends[0].is_healthy());
+            assert!(backends.first().is_some_and(|b| !b.is_healthy()));
             Ok(())
         })
     }
@@ -153,7 +153,7 @@ mod tests {
             tokio::spawn(checker.run());
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert!(backends[0].is_healthy());
+            assert!(backends.first().is_some_and(|b| b.is_healthy()));
             Ok(())
         })
     }
@@ -167,7 +167,7 @@ mod tests {
             tokio::spawn(checker.run());
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert!(!backends[0].is_healthy());
+            assert!(backends.first().is_some_and(|b| !b.is_healthy()));
             Ok(())
         })
     }
