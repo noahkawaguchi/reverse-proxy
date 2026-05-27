@@ -98,7 +98,7 @@ mod tests {
                     let _ = server_http1::Builder::new()
                         .serve_connection(
                             TokioIo::new(stream),
-                            service_fn(|_| async move {
+                            service_fn(async |_| {
                                 let resp = Response::builder()
                                     .status(status)
                                     .body(Full::new(Bytes::new()))

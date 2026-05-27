@@ -181,7 +181,7 @@ mod tests {
                     let _ = server_http1::Builder::new()
                         .serve_connection(
                             TokioIo::new(stream),
-                            service_fn(|_| async move {
+                            service_fn(async |_| {
                                 tokio::time::sleep(response_delay).await;
                                 Ok::<_, Infallible>(Response::new(Full::new(Bytes::new())))
                             }),
