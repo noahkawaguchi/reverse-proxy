@@ -76,10 +76,7 @@ mod tests {
     use crate::test_utils::tokio_test;
     use anyhow::Result;
     use http_body_util::Full;
-    use hyper::{
-        Response, StatusCode, body::Bytes, server::conn::http1 as server_http1, service::service_fn,
-    };
-    use hyper_util::rt::TokioIo;
+    use hyper::{Response, StatusCode, server::conn::http1 as server_http1, service::service_fn};
     use std::convert::Infallible;
     use tokio::net::TcpListener;
 

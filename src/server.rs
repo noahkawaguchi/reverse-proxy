@@ -142,15 +142,10 @@ mod tests {
     use http_body_util::{Empty, Full};
     use hyper::{
         Request, Response, StatusCode, body::Bytes, client::conn::http1 as client_http1,
-        server::conn::http1 as server_http1, service::service_fn,
+        server::conn::http1 as server_http1,
     };
-    use hyper_util::rt::TokioIo;
     use std::{convert::Infallible, net::SocketAddr, time::Duration};
-    use tokio::{
-        net::{TcpListener, TcpStream},
-        sync::oneshot,
-        time::Instant,
-    };
+    use tokio::{net::TcpStream, sync::oneshot, time::Instant};
 
     fn new_test_config(backend_addr: SocketAddr, shutdown_timeout: Duration) -> Config {
         Config {
