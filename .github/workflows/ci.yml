@@ -34,21 +34,19 @@ jobs:
       - uses: actions/checkout@v6
         with: { persist-credentials: false }
 
-      - name: Install fd
-        run: sudo apt-get update && sudo apt-get install -y fd-find
-
       - name: Download Codebook
         env:
-          CODEBOOK_VERSION: v0.3.39
-          CODEBOOK_SHA256: 38302c6e719ce67083e9229c373943ebe45aa359a7a2cfb06e48221c33b59516
+          CODEBOOK_VERSION: v0.3.41
+          CODEBOOK_SHA256: f4cad62804fd2cbe0766f4cdbda9b446568c9ef75fd1af3337f43b4ec8901148
         run: |
-          curl -Lo codebook.tar.gz "https://github.com/blopker/codebook/releases/download/${CODEBOOK_VERSION}/codebook-lsp-aarch64-unknown-linux-musl.tar.gz"
-          echo "$CODEBOOK_SHA256  codebook.tar.gz" | sha256sum -c
-          tar -xzf codebook.tar.gz -C "$RUNNER_TEMP"
+          cd "${RUNNER_TEMP:?}"
+          curl -fsSLo codebook.tar.gz "https://github.com/blopker/codebook/releases/download/${CODEBOOK_VERSION:?}/codebook-lsp-aarch64-unknown-linux-musl.tar.gz"
+          echo "${CODEBOOK_SHA256:?}  codebook.tar.gz" | sha256sum -c
+          tar -xzf codebook.tar.gz
 
       - name: Check spelling
         run: |
-          "$RUNNER_TEMP/codebook-lsp" lint $(fdfind --hidden --exclude .git --type file)
+          git ls-files -z | xargs -0 "${RUNNER_TEMP:?}/codebook-lsp" lint
 
   test:
     runs-on: ubuntu-24.04-arm
