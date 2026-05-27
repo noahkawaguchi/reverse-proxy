@@ -9,6 +9,7 @@ words = [
     "rustfmt",
     "swatinem",
     "tokio",
+    "xff",
     "xzf",
 ]
 ignore_paths = ["Cargo.lock"]
