@@ -23,9 +23,6 @@ pub const fn localhost_addr(port: u16) -> SocketAddr {
 }
 
 /// Creates healthy localhost backends from port numbers.
-pub fn make_healthy_backends(ports: &[u16]) -> Vec<Arc<Backend>> {
-    ports
-        .iter()
-        .map(|&p| Arc::new(Backend::healthy(localhost_addr(p))))
-        .collect()
+pub fn make_healthy_backends<const N: usize>(ports: [u16; N]) -> [Arc<Backend>; N] {
+    ports.map(|p| Arc::new(Backend::healthy(localhost_addr(p))))
 }

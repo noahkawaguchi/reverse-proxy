@@ -54,7 +54,7 @@ mod tests {
     #[test]
     fn single_backend_always_returns_same_addr() -> Result<()> {
         let addr = localhost_addr(8001);
-        let lc = LeastConnections::init(make_healthy_backends(&[8001]))?;
+        let lc = LeastConnections::init(make_healthy_backends([8001]).to_vec())?;
 
         for _ in 0..3 {
             assert_eq!(lc.next().context("expected backend")?.addr(), addr);
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn empty_backends_returns_err() {
-        assert!(LeastConnections::init(make_healthy_backends(&[])).is_err());
+        assert!(LeastConnections::init(make_healthy_backends([]).to_vec()).is_err());
     }
 
     #[test]
@@ -98,8 +98,8 @@ mod tests {
 
     #[test]
     fn routes_to_backend_with_fewest_connections() -> Result<()> {
-        let backends = make_healthy_backends(&[8000, 8001]);
-        let lc = LeastConnections::init(backends.clone())?;
+        let backends = make_healthy_backends([8000, 8001]);
+        let lc = LeastConnections::init(backends.to_vec())?;
 
         // Give 8000 two active connections so 8001 always wins
         let _c1 = Arc::clone(&backends[0]).acquire();
@@ -119,8 +119,8 @@ mod tests {
 
     #[test]
     fn increments_count_on_next_and_decrements_on_drop() -> Result<()> {
-        let backends = make_healthy_backends(&[8001]);
-        let lc = LeastConnections::init(backends.clone())?;
+        let backends = make_healthy_backends([8001]);
+        let lc = LeastConnections::init(backends.to_vec())?;
 
         assert_eq!(backends[0].num_connections(), 0);
 
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn chooses_valid_backend_when_tied() -> Result<()> {
         let (a, b) = (localhost_addr(8001), localhost_addr(8002));
-        let lc = LeastConnections::init(make_healthy_backends(&[8001, 8002]))?;
+        let lc = LeastConnections::init(make_healthy_backends([8001, 8002]).to_vec())?;
 
         for _ in 0..10 {
             let addr = lc.next().context("expected backend")?.addr();

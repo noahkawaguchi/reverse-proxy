@@ -55,7 +55,7 @@ mod tests {
             localhost_addr(8003),
         );
 
-        let rr = RoundRobin::init(make_healthy_backends(&[8001, 8002, 8003]))?;
+        let rr = RoundRobin::init(make_healthy_backends([8001, 8002, 8003]).to_vec())?;
 
         assert_eq!(rr.next().map(|g| g.addr()), Some(a1));
         assert_eq!(rr.next().map(|g| g.addr()), Some(a2));
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn single_backend_always_returns_same_addr() -> Result<()> {
         let addr = localhost_addr(8001);
-        let rr = RoundRobin::init(make_healthy_backends(&[8001]))?;
+        let rr = RoundRobin::init(make_healthy_backends([8001]).to_vec())?;
 
         assert_eq!(rr.next().map(|g| g.addr()), Some(addr));
         assert_eq!(rr.next().map(|g| g.addr()), Some(addr));
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn empty_backends_returns_err() {
-        assert!(RoundRobin::init(make_healthy_backends(&[])).is_err());
+        assert!(RoundRobin::init(make_healthy_backends([]).to_vec()).is_err());
     }
 
     #[test]
