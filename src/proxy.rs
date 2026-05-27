@@ -16,6 +16,10 @@ use tokio::net::TcpStream;
 use tracing::{error, warn};
 
 /// A generic `Response` containing a boxed `Body` (may be `Incoming`, `Empty<Bytes>`, etc.).
+#[expect(
+    unused_qualifications,
+    reason = "Absolute paths for clarity in type alias"
+)]
 type BoxBodyResp = hyper::Response<http_body_util::combinators::BoxBody<Bytes, hyper::Error>>;
 
 const X_FORWARDED_FOR: HeaderName = HeaderName::from_static("x-forwarded-for");
