@@ -20,7 +20,7 @@ impl HealthChecker {
         Self { backends, path, interval }
     }
 
-    pub async fn run(self) {
+    pub async fn run(self) -> ! {
         loop {
             for backend in &self.backends {
                 let is_healthy = self.check_backend(backend.addr()).await;
