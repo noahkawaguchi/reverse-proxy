@@ -42,7 +42,7 @@ impl HealthChecker {
     }
 
     async fn check_backend(&self, addr: SocketAddr) -> bool {
-        let check_fut = async move {
+        let check_fut = async {
             let Ok(stream) = TcpStream::connect(addr).await else { return false };
             let Ok((mut sender, conn)) = client_http1::handshake(TokioIo::new(stream)).await else {
                 return false;

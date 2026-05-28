@@ -72,7 +72,7 @@ pub async fn run(
                 join_set.spawn(async move {
                     let conn = server_http1::Builder::new().serve_connection(
                         TokioIo::new(stream),
-                        service_fn(move |req| {
+                        service_fn( |req| {
                             proxy::forward(req, client_addr, Arc::clone(&conn_routes))
                         }),
                     );
@@ -197,7 +197,7 @@ mod tests {
         let io = TokioIo::new(TcpStream::connect(proxy_addr).await?);
         let (mut sender, conn) = client_http1::handshake(io).await?;
 
-        tokio::spawn(async move { assert!(conn.await.is_ok()) });
+        tokio::spawn(async { assert!(conn.await.is_ok()) });
 
         let req = Request::builder()
             .uri(format!("http://{proxy_addr}/"))
@@ -217,7 +217,7 @@ mod tests {
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
             let config = new_test_config(backend_addr, Duration::from_secs(2));
 
-            let proxy = tokio::spawn(run(config, proxy_listener, async move {
+            let proxy = tokio::spawn(run(config, proxy_listener, async {
                 assert!(shutdown_rx.await.is_ok());
             }));
 
@@ -247,7 +247,7 @@ mod tests {
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
             let config = new_test_config(backend_addr, Duration::from_millis(100));
 
-            let proxy = tokio::spawn(run(config, proxy_listener, async move {
+            let proxy = tokio::spawn(run(config, proxy_listener, async {
                 assert!(shutdown_rx.await.is_ok());
             }));
 
@@ -285,7 +285,7 @@ mod tests {
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
             let config = new_test_config(backend_addr, Duration::from_secs(1));
 
-            let proxy = tokio::spawn(run(config, proxy_listener, async move {
+            let proxy = tokio::spawn(run(config, proxy_listener, async {
                 assert!(shutdown_rx.await.is_ok());
             }));
 
