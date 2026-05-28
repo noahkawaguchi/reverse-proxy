@@ -116,20 +116,20 @@ mod tests {
         Ok(addr)
     }
 
-    fn make_checker(addr: SocketAddr, starts_healthy: bool) -> (HealthChecker, Vec<Arc<Backend>>) {
-        let backends = vec![Arc::new(if starts_healthy {
+    fn make_checker(addr: SocketAddr, starts_healthy: bool) -> (HealthChecker, Arc<Backend>) {
+        let backend = Arc::new(if starts_healthy {
             Backend::healthy(addr)
         } else {
             Backend::unhealthy(addr)
-        })];
+        });
 
         let checker = HealthChecker::new(
-            backends.clone(),
+            vec![Arc::clone(&backend)],
             String::from("/"),
             Duration::from_millis(20),
         );
 
-        (checker, backends)
+        (checker, backend)
     }
 
     #[test]
@@ -139,11 +139,11 @@ mod tests {
             let unreachable_addr = listener.local_addr()?;
             drop(listener);
 
-            let (checker, backends) = make_checker(unreachable_addr, true);
+            let (checker, backend) = make_checker(unreachable_addr, true);
             tokio::spawn(checker.run());
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert!(backends.first().is_some_and(|b| !b.is_healthy()));
+            assert!(!backend.is_healthy());
             Ok(())
         })
     }
@@ -152,12 +152,12 @@ mod tests {
     fn marks_backend_healthy_when_responding_with_2xx() -> Result<()> {
         tokio_test(async {
             let backend_addr = spawn_test_backend(StatusCode::OK).await?;
-            let (checker, backends) = make_checker(backend_addr, false);
+            let (checker, backend) = make_checker(backend_addr, false);
 
             tokio::spawn(checker.run());
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert!(backends.first().is_some_and(|b| b.is_healthy()));
+            assert!(backend.is_healthy());
             Ok(())
         })
     }
@@ -166,12 +166,12 @@ mod tests {
     fn marks_backend_unhealthy_when_responding_with_non_2xx() -> Result<()> {
         tokio_test(async {
             let backend_addr = spawn_test_backend(StatusCode::INTERNAL_SERVER_ERROR).await?;
-            let (checker, backends) = make_checker(backend_addr, true);
+            let (checker, backend) = make_checker(backend_addr, true);
 
             tokio::spawn(checker.run());
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert!(backends.first().is_some_and(|b| !b.is_healthy()));
+            assert!(!backend.is_healthy());
             Ok(())
         })
     }
