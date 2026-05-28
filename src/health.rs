@@ -48,7 +48,11 @@ impl HealthChecker {
                 return false;
             };
 
-            tokio::spawn(async move { assert!(conn.await.is_ok()) });
+            tokio::spawn(async {
+                if let Err(e) = conn.await {
+                    warn!("{e}");
+                }
+            });
 
             let Ok(req) = Request::builder()
                 .uri(&self.path)
