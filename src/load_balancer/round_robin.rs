@@ -26,19 +26,23 @@ impl RoundRobin {
 }
 
 impl LoadBalancer for RoundRobin {
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "Wrapping desired for round robin counter"
+    )]
     fn next(&self) -> Option<BackendGuard> {
         let n = self.backends.len();
         let start = self.counter.fetch_add(1, Ordering::Relaxed) % n;
         let mut i = start;
 
-        while !self.backends[i].is_healthy() {
+        while !self.backends.get(i)?.is_healthy() {
             i = self.counter.fetch_add(1, Ordering::Relaxed) % n;
             if i == start {
                 return None;
             }
         }
 
-        Some(Arc::clone(&self.backends[i]).acquire())
+        Some(Arc::clone(self.backends.get(i).as_ref()?).acquire())
     }
 }
 
@@ -55,7 +59,7 @@ mod tests {
             localhost_addr(8003),
         );
 
-        let rr = RoundRobin::init(make_healthy_backends(&[8001, 8002, 8003]))?;
+        let rr = RoundRobin::init(make_healthy_backends([8001, 8002, 8003]).to_vec())?;
 
         assert_eq!(rr.next().map(|g| g.addr()), Some(a1));
         assert_eq!(rr.next().map(|g| g.addr()), Some(a2));
@@ -68,7 +72,7 @@ mod tests {
     #[test]
     fn single_backend_always_returns_same_addr() -> Result<()> {
         let addr = localhost_addr(8001);
-        let rr = RoundRobin::init(make_healthy_backends(&[8001]))?;
+        let rr = RoundRobin::init(make_healthy_backends([8001]).to_vec())?;
 
         assert_eq!(rr.next().map(|g| g.addr()), Some(addr));
         assert_eq!(rr.next().map(|g| g.addr()), Some(addr));
@@ -79,7 +83,7 @@ mod tests {
 
     #[test]
     fn empty_backends_returns_err() {
-        assert!(RoundRobin::init(make_healthy_backends(&[])).is_err());
+        assert!(RoundRobin::init(make_healthy_backends([]).to_vec()).is_err());
     }
 
     #[test]

@@ -16,6 +16,10 @@ use tokio::net::TcpStream;
 use tracing::{error, warn};
 
 /// A generic `Response` containing a boxed `Body` (may be `Incoming`, `Empty<Bytes>`, etc.).
+#[expect(
+    unused_qualifications,
+    reason = "Absolute paths for clarity in type alias"
+)]
 type BoxBodyResp = hyper::Response<http_body_util::combinators::BoxBody<Bytes, hyper::Error>>;
 
 const X_FORWARDED_FOR: HeaderName = HeaderName::from_static("x-forwarded-for");
@@ -129,9 +133,10 @@ fn prepare_response<B>(mut resp: Response<B>) -> Response<B> {
 /// Removes the standard hop-by-hop headers and any custom headers named in the Connection header.
 fn strip_hop_by_hop_headers(headers: &mut HeaderMap) {
     let extra = get_str_val(headers, &CONNECTION)
-        .map(|s| {
-            s.split(',')
-                .map(|s| s.trim().to_lowercase())
+        .map(|connection_val| {
+            connection_val
+                .split(',')
+                .map(|header_name| header_name.trim().to_lowercase())
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();

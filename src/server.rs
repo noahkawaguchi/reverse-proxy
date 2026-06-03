@@ -72,7 +72,7 @@ pub async fn run(
                 join_set.spawn(async move {
                     let conn = server_http1::Builder::new().serve_connection(
                         TokioIo::new(stream),
-                        service_fn(move |req| {
+                        service_fn( |req| {
                             proxy::forward(req, client_addr, Arc::clone(&conn_routes))
                         }),
                     );
@@ -142,15 +142,10 @@ mod tests {
     use http_body_util::{Empty, Full};
     use hyper::{
         Request, Response, StatusCode, body::Bytes, client::conn::http1 as client_http1,
-        server::conn::http1 as server_http1, service::service_fn,
+        server::conn::http1 as server_http1,
     };
-    use hyper_util::rt::TokioIo;
     use std::{convert::Infallible, net::SocketAddr, time::Duration};
-    use tokio::{
-        net::{TcpListener, TcpStream},
-        sync::oneshot,
-        time::Instant,
-    };
+    use tokio::{net::TcpStream, sync::oneshot, time::Instant};
 
     fn new_test_config(backend_addr: SocketAddr, shutdown_timeout: Duration) -> Config {
         Config {
@@ -178,15 +173,18 @@ mod tests {
                 let Ok((stream, _)) = listener.accept().await else { break };
 
                 tokio::spawn(async move {
-                    let _ = server_http1::Builder::new()
-                        .serve_connection(
-                            TokioIo::new(stream),
-                            service_fn(|_| async move {
-                                tokio::time::sleep(response_delay).await;
-                                Ok::<_, Infallible>(Response::new(Full::new(Bytes::new())))
-                            }),
-                        )
-                        .await;
+                    assert!(
+                        server_http1::Builder::new()
+                            .serve_connection(
+                                TokioIo::new(stream),
+                                service_fn(async |_| {
+                                    tokio::time::sleep(response_delay).await;
+                                    Ok::<_, Infallible>(Response::new(Full::new(Bytes::new())))
+                                }),
+                            )
+                            .await
+                            .is_ok()
+                    );
                 });
             }
         });
@@ -199,9 +197,7 @@ mod tests {
         let io = TokioIo::new(TcpStream::connect(proxy_addr).await?);
         let (mut sender, conn) = client_http1::handshake(io).await?;
 
-        tokio::spawn(async move {
-            let _ = conn.await;
-        });
+        tokio::spawn(async { assert!(conn.await.is_ok()) });
 
         let req = Request::builder()
             .uri(format!("http://{proxy_addr}/"))
@@ -221,8 +217,8 @@ mod tests {
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
             let config = new_test_config(backend_addr, Duration::from_secs(2));
 
-            let proxy = tokio::spawn(run(config, proxy_listener, async move {
-                let _ = shutdown_rx.await;
+            let proxy = tokio::spawn(run(config, proxy_listener, async {
+                assert!(shutdown_rx.await.is_ok());
             }));
 
             let request = tokio::spawn(send_request(proxy_addr));
@@ -231,7 +227,7 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(50)).await;
 
             // Trigger shutdown while the backend is still processing (it sleeps 100ms total)
-            let _ = shutdown_tx.send(());
+            assert!(shutdown_tx.send(()).is_ok());
 
             // The in-flight request should still complete successfully
             assert_eq!(request.await??, StatusCode::OK);
@@ -251,8 +247,8 @@ mod tests {
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
             let config = new_test_config(backend_addr, Duration::from_millis(100));
 
-            let proxy = tokio::spawn(run(config, proxy_listener, async move {
-                let _ = shutdown_rx.await;
+            let proxy = tokio::spawn(run(config, proxy_listener, async {
+                assert!(shutdown_rx.await.is_ok());
             }));
 
             // Start a request that will be held at the slow backend
@@ -262,7 +258,7 @@ mod tests {
             tokio::time::sleep(Duration::from_millis(50)).await;
 
             let start = Instant::now();
-            let _ = shutdown_tx.send(());
+            assert!(shutdown_tx.send(()).is_ok());
             proxy.await??;
 
             let elapsed = start.elapsed();
@@ -289,8 +285,8 @@ mod tests {
             let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
             let config = new_test_config(backend_addr, Duration::from_secs(1));
 
-            let proxy = tokio::spawn(run(config, proxy_listener, async move {
-                let _ = shutdown_rx.await;
+            let proxy = tokio::spawn(run(config, proxy_listener, async {
+                assert!(shutdown_rx.await.is_ok());
             }));
 
             // Wait for the health checker to mark the backend unhealthy
@@ -301,7 +297,7 @@ mod tests {
                 StatusCode::SERVICE_UNAVAILABLE
             );
 
-            let _ = shutdown_tx.send(());
+            assert!(shutdown_tx.send(()).is_ok());
             proxy.await??;
 
             Ok(())
