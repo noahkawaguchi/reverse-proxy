@@ -32,7 +32,7 @@ unreachable   = "forbid"
 unwrap_used   = "forbid"
 
 # Implicit panics (and wrapping)
-arithmetic_side_effects = "deny"
+arithmetic_side_effects = "deny"   # Desired for atomic counters meant to wrap
 indexing_slicing        = "forbid"
 string_slice            = "forbid"
 
