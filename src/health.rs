@@ -81,7 +81,7 @@ mod tests {
     use anyhow::Result;
     use http_body_util::Full;
     use hyper::{Response, StatusCode, server::conn::http1 as server_http1, service::service_fn};
-    use std::convert::Infallible;
+    use std::{assert_matches, convert::Infallible};
     use tokio::net::TcpListener;
 
     /// Spawns an HTTP backend that responds to every request with `status`.
@@ -94,7 +94,7 @@ mod tests {
                 let Ok((stream, _)) = listener.accept().await else { break };
 
                 tokio::spawn(async move {
-                    assert!(
+                    assert_matches!(
                         server_http1::Builder::new()
                             .serve_connection(
                                 TokioIo::new(stream),
@@ -106,8 +106,8 @@ mod tests {
                                     Ok::<_, Infallible>(resp)
                                 }),
                             )
-                            .await
-                            .is_ok()
+                            .await,
+                        Ok(())
                     );
                 });
             }
