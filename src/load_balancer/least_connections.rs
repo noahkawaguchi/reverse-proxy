@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 /// One or more backends selected by fewest active connections.
 /// Skips backends whose `healthy` flag is `false`. Breaks ties randomly.
+#[cfg_attr(test, derive(Debug))]
 pub struct LeastConnections {
     backends: Vec<Arc<Backend>>,
 }

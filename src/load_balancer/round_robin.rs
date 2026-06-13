@@ -10,6 +10,7 @@ use std::sync::{
 
 /// One or more backends to be cycled through for round robin load balancing.
 /// Skips backends whose `healthy` flag is `false`.
+#[cfg_attr(test, derive(Debug))]
 pub struct RoundRobin {
     backends: Vec<Arc<Backend>>,
     counter: AtomicUsize,
