@@ -10,6 +10,7 @@ use std::sync::{
 
 /// One or more backends to be cycled through for round robin load balancing.
 /// Skips backends whose `healthy` flag is `false`.
+#[cfg_attr(test, derive(Debug))]
 pub struct RoundRobin {
     backends: Vec<Arc<Backend>>,
     counter: AtomicUsize,
@@ -50,6 +51,7 @@ impl LoadBalancer for RoundRobin {
 mod tests {
     use super::*;
     use crate::test_utils::{localhost_addr, make_healthy_backends};
+    use std::assert_matches;
 
     #[test]
     fn cycles_through_backends_in_order() -> Result<()> {
@@ -83,7 +85,7 @@ mod tests {
 
     #[test]
     fn empty_backends_returns_err() {
-        assert!(RoundRobin::init(make_healthy_backends([]).to_vec()).is_err());
+        assert_matches!(RoundRobin::init(make_healthy_backends([]).to_vec()), Err(_));
     }
 
     #[test]

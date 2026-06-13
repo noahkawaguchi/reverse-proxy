@@ -20,6 +20,7 @@ impl Drop for BackendGuard {
 }
 
 /// A backend address with a healthy or unhealthy state and an active connection count.
+#[cfg_attr(test, derive(Debug))]
 pub struct Backend {
     addr: SocketAddr,
     healthy: AtomicBool,

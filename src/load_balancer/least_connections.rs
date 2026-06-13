@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 /// One or more backends selected by fewest active connections.
 /// Skips backends whose `healthy` flag is `false`. Breaks ties randomly.
+#[cfg_attr(test, derive(Debug))]
 pub struct LeastConnections {
     backends: Vec<Arc<Backend>>,
 }
@@ -50,6 +51,7 @@ mod tests {
     use super::*;
     use crate::test_utils::{localhost_addr, make_healthy_backends};
     use anyhow::Context;
+    use std::assert_matches;
 
     #[test]
     fn single_backend_always_returns_same_addr() -> Result<()> {
@@ -65,7 +67,10 @@ mod tests {
 
     #[test]
     fn empty_backends_returns_err() {
-        assert!(LeastConnections::init(make_healthy_backends([]).to_vec()).is_err());
+        assert_matches!(
+            LeastConnections::init(make_healthy_backends([]).to_vec()),
+            Err(_)
+        );
     }
 
     #[test]
