@@ -1,16 +1,20 @@
-use crate::{
-    backend::Backend,
-    config::{BalancingAlgorithm, Config, Route},
-    health::HealthChecker,
-    load_balancer::{LoadBalancer, least_connections::LeastConnections, round_robin::RoundRobin},
-    proxy,
+use {
+    crate::{
+        backend::Backend,
+        config::{BalancingAlgorithm, Config, Route},
+        health::HealthChecker,
+        load_balancer::{
+            LoadBalancer, least_connections::LeastConnections, round_robin::RoundRobin,
+        },
+        proxy,
+    },
+    anyhow::Result,
+    hyper::{server::conn::http1 as server_http1, service::service_fn},
+    hyper_util::rt::TokioIo,
+    std::sync::Arc,
+    tokio::{net::TcpListener, sync::watch, task::JoinSet, time::timeout},
+    tracing::{error, info, warn},
 };
-use anyhow::Result;
-use hyper::{server::conn::http1 as server_http1, service::service_fn};
-use hyper_util::rt::TokioIo;
-use std::sync::Arc;
-use tokio::{net::TcpListener, sync::watch, task::JoinSet, time::timeout};
-use tracing::{error, info, warn};
 
 pub async fn run(
     config: Config,
@@ -49,11 +53,7 @@ pub async fn run(
         .collect::<Result<Vec<_>>>()?
         .into();
 
-    info!(
-        "Listening on {} with {} route(s)",
-        listener.local_addr()?,
-        routes.len()
-    );
+    info!("Listening on {} with {} route(s)", listener.local_addr()?, routes.len());
 
     let (shutdown_tx, _) = watch::channel(false);
     let mut join_set = JoinSet::new();
@@ -121,10 +121,7 @@ pub async fn run(
         {
             info!("All connections closed within timeout");
         } else {
-            warn!(
-                "Shutdown timeout exceeded, dropping {} remaining connections",
-                join_set.len()
-            );
+            warn!("Shutdown timeout exceeded, dropping {} remaining connections", join_set.len());
         }
     }
 
@@ -134,18 +131,20 @@ pub async fn run(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        config::{HealthCheckConfig, RouteConfig},
-        test_utils::{localhost_addr, tokio_test},
+    use {
+        super::*,
+        crate::{
+            config::{HealthCheckConfig, RouteConfig},
+            test_utils::{localhost_addr, tokio_test},
+        },
+        http_body_util::{Empty, Full},
+        hyper::{
+            Request, Response, StatusCode, body::Bytes, client::conn::http1 as client_http1,
+            server::conn::http1 as server_http1,
+        },
+        std::{assert_matches, convert::Infallible, net::SocketAddr, time::Duration},
+        tokio::{net::TcpStream, sync::oneshot, time::Instant},
     };
-    use http_body_util::{Empty, Full};
-    use hyper::{
-        Request, Response, StatusCode, body::Bytes, client::conn::http1 as client_http1,
-        server::conn::http1 as server_http1,
-    };
-    use std::{assert_matches, convert::Infallible, net::SocketAddr, time::Duration};
-    use tokio::{net::TcpStream, sync::oneshot, time::Instant};
 
     fn new_test_config(backend_addr: SocketAddr, shutdown_timeout: Duration) -> Config {
         Config {
@@ -292,10 +291,7 @@ mod tests {
             // Wait for the health checker to mark the backend unhealthy
             tokio::time::sleep(Duration::from_millis(200)).await;
 
-            assert_eq!(
-                send_request(proxy_addr).await?,
-                StatusCode::SERVICE_UNAVAILABLE
-            );
+            assert_eq!(send_request(proxy_addr).await?, StatusCode::SERVICE_UNAVAILABLE);
 
             assert_matches!(shutdown_tx.send(()), Ok(()));
             proxy.await??;

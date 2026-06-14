@@ -1,11 +1,13 @@
-use crate::{
-    backend::{Backend, BackendGuard},
-    load_balancer::LoadBalancer,
-};
-use anyhow::{Result, bail};
-use std::sync::{
-    Arc,
-    atomic::{AtomicUsize, Ordering},
+use {
+    crate::{
+        backend::{Backend, BackendGuard},
+        load_balancer::LoadBalancer,
+    },
+    anyhow::{Result, bail},
+    std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
 };
 
 /// One or more backends to be cycled through for round robin load balancing.
@@ -27,10 +29,7 @@ impl RoundRobin {
 }
 
 impl LoadBalancer for RoundRobin {
-    #[expect(
-        clippy::arithmetic_side_effects,
-        reason = "Wrapping desired for round robin counter"
-    )]
+    #[expect(clippy::arithmetic_side_effects, reason = "Wrapping desired for round robin counter")]
     fn next(&self) -> Option<BackendGuard> {
         let n = self.backends.len();
         let start = self.counter.fetch_add(1, Ordering::Relaxed) % n;
@@ -49,17 +48,15 @@ impl LoadBalancer for RoundRobin {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test_utils::{localhost_addr, make_healthy_backends};
-    use std::assert_matches;
+    use {
+        super::*,
+        crate::test_utils::{localhost_addr, make_healthy_backends},
+        std::assert_matches,
+    };
 
     #[test]
     fn cycles_through_backends_in_order() -> Result<()> {
-        let (a1, a2, a3) = (
-            localhost_addr(8001),
-            localhost_addr(8002),
-            localhost_addr(8003),
-        );
+        let [a1, a2, a3] = [localhost_addr(8001), localhost_addr(8002), localhost_addr(8003)];
 
         let rr = RoundRobin::init(make_healthy_backends([8001, 8002, 8003]).to_vec())?;
 
@@ -90,11 +87,7 @@ mod tests {
 
     #[test]
     fn skips_unhealthy_backends() -> Result<()> {
-        let (a1, a2, a3) = (
-            localhost_addr(8001),
-            localhost_addr(8002),
-            localhost_addr(8003),
-        );
+        let [a1, a2, a3] = [localhost_addr(8001), localhost_addr(8002), localhost_addr(8003)];
 
         let rr = RoundRobin::init(vec![
             Arc::new(Backend::healthy(a1)),

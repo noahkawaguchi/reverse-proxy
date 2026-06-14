@@ -1,10 +1,12 @@
-use crate::{
-    backend::{Backend, BackendGuard},
-    load_balancer::LoadBalancer,
+use {
+    crate::{
+        backend::{Backend, BackendGuard},
+        load_balancer::LoadBalancer,
+    },
+    anyhow::{Result, bail},
+    rand::prelude::IndexedRandom as _,
+    std::sync::Arc,
 };
-use anyhow::{Result, bail};
-use rand::prelude::IndexedRandom as _;
-use std::sync::Arc;
 
 /// One or more backends selected by fewest active connections.
 /// Skips backends whose `healthy` flag is `false`. Breaks ties randomly.
@@ -48,10 +50,12 @@ impl LoadBalancer for LeastConnections {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test_utils::{localhost_addr, make_healthy_backends};
-    use anyhow::Context as _;
-    use std::assert_matches;
+    use {
+        super::*,
+        crate::test_utils::{localhost_addr, make_healthy_backends},
+        anyhow::Context as _,
+        std::assert_matches,
+    };
 
     #[test]
     fn single_backend_always_returns_same_addr() -> Result<()> {
@@ -67,10 +71,7 @@ mod tests {
 
     #[test]
     fn empty_backends_returns_err() {
-        assert_matches!(
-            LeastConnections::init(make_healthy_backends([]).to_vec()),
-            Err(_)
-        );
+        assert_matches!(LeastConnections::init(make_healthy_backends([]).to_vec()), Err(_));
     }
 
     #[test]
@@ -113,10 +114,7 @@ mod tests {
         for _ in 0..5 {
             // The guard drops at the end of each iteration, decrementing 8001 back to 0 while 8000
             // stays at 2
-            assert_eq!(
-                lc.next().context("expected backend")?.addr(),
-                backends[1].addr()
-            );
+            assert_eq!(lc.next().context("expected backend")?.addr(), backends[1].addr());
         }
 
         Ok(())

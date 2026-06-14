@@ -1,6 +1,8 @@
-use anyhow::{Result, anyhow};
-use tracing::{debug, level_filters::LevelFilter};
-use tracing_subscriber::EnvFilter;
+use {
+    anyhow::{Result, anyhow},
+    tracing::{debug, level_filters::LevelFilter},
+    tracing_subscriber::EnvFilter,
+};
 
 /// Installs a global tracing subscriber that defaults to `default_level` unless overridden by the
 /// `RUST_LOG` environment variable.

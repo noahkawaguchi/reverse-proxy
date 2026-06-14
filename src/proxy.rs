@@ -1,25 +1,24 @@
-use crate::config::Route;
-use anyhow::Result;
-use http_body_util::{BodyExt, Empty};
-use hyper::{
-    Request, Response, StatusCode,
-    body::{Bytes, Incoming},
-    client::conn::http1 as client_http1,
-    header::{
-        CONNECTION, HOST, HeaderMap, HeaderName, PROXY_AUTHENTICATE, PROXY_AUTHORIZATION, TE,
-        TRAILER, TRANSFER_ENCODING, UPGRADE,
+use {
+    crate::config::Route,
+    anyhow::Result,
+    http_body_util::{BodyExt, Empty},
+    hyper::{
+        Request, Response, StatusCode,
+        body::{Bytes, Incoming},
+        client::conn::http1 as client_http1,
+        header::{
+            CONNECTION, HOST, HeaderMap, HeaderName, PROXY_AUTHENTICATE, PROXY_AUTHORIZATION, TE,
+            TRAILER, TRANSFER_ENCODING, UPGRADE,
+        },
     },
+    hyper_util::rt::TokioIo,
+    std::{net::SocketAddr, sync::Arc},
+    tokio::net::TcpStream,
+    tracing::{error, warn},
 };
-use hyper_util::rt::TokioIo;
-use std::{net::SocketAddr, sync::Arc};
-use tokio::net::TcpStream;
-use tracing::{error, warn};
 
 /// A generic `Response` containing a boxed `Body` (may be `Incoming`, `Empty<Bytes>`, etc.).
-#[expect(
-    unused_qualifications,
-    reason = "Absolute paths for clarity in type alias"
-)]
+#[expect(unused_qualifications, reason = "Absolute paths for clarity in type alias")]
 type BoxBodyResp = hyper::Response<http_body_util::combinators::BoxBody<Bytes, hyper::Error>>;
 
 const X_FORWARDED_FOR: HeaderName = HeaderName::from_static("x-forwarded-for");
@@ -112,10 +111,8 @@ fn prepare_request<B>(
     let headers = req.headers_mut();
     let client_ip = client_addr.ip();
 
-    let xff = get_str_val(headers, &X_FORWARDED_FOR).map_or_else(
-        || client_ip.to_string(),
-        |existing| format!("{existing}, {client_ip}"),
-    );
+    let xff = get_str_val(headers, &X_FORWARDED_FOR)
+        .map_or_else(|| client_ip.to_string(), |existing| format!("{existing}, {client_ip}"));
 
     strip_hop_by_hop_headers(headers);
 
@@ -165,12 +162,14 @@ fn get_str_val<'a>(headers: &'a HeaderMap, header_name: &HeaderName) -> Option<&
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        backend::Backend, load_balancer::round_robin::RoundRobin, test_utils::localhost_addr,
+    use {
+        super::*,
+        crate::{
+            backend::Backend, load_balancer::round_robin::RoundRobin, test_utils::localhost_addr,
+        },
+        hyper::header::HeaderValue,
+        std::net::{IpAddr, Ipv4Addr},
     };
-    use hyper::header::HeaderValue;
-    use std::net::{IpAddr, Ipv4Addr};
 
     const BACKEND_ADDR: SocketAddr = localhost_addr(8000);
     const CLIENT_ADDR: SocketAddr =

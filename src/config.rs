@@ -1,16 +1,15 @@
-use crate::load_balancer::LoadBalancer;
-use anyhow::{Context as _, Result};
-use serde::{Deserialize, Deserializer};
-use std::{env, fs, net::SocketAddr, time::Duration};
+use {
+    crate::load_balancer::LoadBalancer,
+    anyhow::{Context as _, Result},
+    serde::{Deserialize, Deserializer},
+    std::{env, fs, net::SocketAddr, time::Duration},
+};
 
 #[derive(Deserialize)]
 pub struct HealthCheckConfig {
     pub path: String,
 
-    #[serde(
-        rename = "interval_secs",
-        deserialize_with = "deserialize_duration_secs"
-    )]
+    #[serde(rename = "interval_secs", deserialize_with = "deserialize_duration_secs")]
     pub interval: Duration,
 }
 
