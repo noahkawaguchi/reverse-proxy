@@ -3,7 +3,7 @@ use crate::{
     load_balancer::LoadBalancer,
 };
 use anyhow::{Result, bail};
-use rand::prelude::IndexedRandom;
+use rand::prelude::IndexedRandom as _;
 use std::sync::Arc;
 
 /// One or more backends selected by fewest active connections.
@@ -50,7 +50,7 @@ impl LoadBalancer for LeastConnections {
 mod tests {
     use super::*;
     use crate::test_utils::{localhost_addr, make_healthy_backends};
-    use anyhow::Context;
+    use anyhow::Context as _;
     use std::assert_matches;
 
     #[test]

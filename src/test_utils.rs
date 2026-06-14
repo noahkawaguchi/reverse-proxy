@@ -1,5 +1,5 @@
 use crate::backend::Backend;
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
