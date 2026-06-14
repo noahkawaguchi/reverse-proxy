@@ -1,5 +1,5 @@
 use crate::load_balancer::LoadBalancer;
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use serde::{Deserialize, Deserializer};
 use std::{env, fs, net::SocketAddr, time::Duration};
 
