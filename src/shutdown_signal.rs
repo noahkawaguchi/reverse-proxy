@@ -1,5 +1,7 @@
-use anyhow::Result;
-use tracing::{info, warn};
+use {
+    anyhow::Result,
+    tracing::{info, warn},
+};
 
 /// Creates Unix signal handlers that listen for SIGINT and SIGTERM.
 ///
@@ -40,10 +42,7 @@ pub fn listen() -> Result<impl Future<Output = ()>> {
 ///
 /// Does not return `Err`. This function is only wrapped in `Result` to match the Unix version.
 /// Errors receiving Ctrl+C are logged, but not returned.
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "To match the Unix version of this function"
-)]
+#[expect(clippy::unnecessary_wraps, reason = "To match the Unix version of this function")]
 #[cfg(not(unix))]
 pub fn listen() -> Result<impl Future<Output = ()>> {
     Ok(async {

@@ -1,8 +1,10 @@
-use crate::backend::Backend;
-use anyhow::{Context as _, Result};
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
+use {
+    crate::backend::Backend,
+    anyhow::{Context as _, Result},
+    std::{
+        net::{IpAddr, Ipv4Addr, SocketAddr},
+        sync::Arc,
+    },
 };
 
 /// Replaces `#[tokio::test]`, not inserting `#[allow(clippy::expect_used)]`.

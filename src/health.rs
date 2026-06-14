@@ -1,10 +1,12 @@
-use crate::backend::Backend;
-use http_body_util::Empty;
-use hyper::{Request, body::Bytes, client::conn::http1 as client_http1, header::HOST};
-use hyper_util::rt::TokioIo;
-use std::{net::SocketAddr, sync::Arc, time::Duration};
-use tokio::net::TcpStream;
-use tracing::{info, warn};
+use {
+    crate::backend::Backend,
+    http_body_util::Empty,
+    hyper::{Request, body::Bytes, client::conn::http1 as client_http1, header::HOST},
+    hyper_util::rt::TokioIo,
+    std::{net::SocketAddr, sync::Arc, time::Duration},
+    tokio::net::TcpStream,
+    tracing::{info, warn},
+};
 
 /// The amount of time to wait for a response when checking a backend's health.
 const HEALTH_CHECK_TIMEOUT: Duration = Duration::from_secs(5);
@@ -76,13 +78,15 @@ impl HealthChecker {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test_utils::tokio_test;
-    use anyhow::Result;
-    use http_body_util::Full;
-    use hyper::{Response, StatusCode, server::conn::http1 as server_http1, service::service_fn};
-    use std::{assert_matches, convert::Infallible};
-    use tokio::net::TcpListener;
+    use {
+        super::*,
+        crate::test_utils::tokio_test,
+        anyhow::Result,
+        http_body_util::Full,
+        hyper::{Response, StatusCode, server::conn::http1 as server_http1, service::service_fn},
+        std::{assert_matches, convert::Infallible},
+        tokio::net::TcpListener,
+    };
 
     /// Spawns an HTTP backend that responds to every request with `status`.
     async fn spawn_test_backend(status: StatusCode) -> Result<SocketAddr> {

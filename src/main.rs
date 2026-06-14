@@ -10,10 +10,10 @@ mod shutdown_signal;
 #[cfg(test)]
 mod test_utils;
 
-use crate::config::Config;
-use anyhow::Result;
-use tokio::net::TcpListener;
-use tracing::level_filters::LevelFilter;
+use {
+    crate::config::Config, anyhow::Result, tokio::net::TcpListener,
+    tracing::level_filters::LevelFilter,
+};
 
 fn main() -> Result<()> {
     tokio::runtime::Builder::new_multi_thread()
