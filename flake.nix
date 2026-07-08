@@ -28,7 +28,6 @@
 
               codebook
               just
-              tombi
             ];
           };
         }
