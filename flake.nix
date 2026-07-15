@@ -28,6 +28,7 @@
 
               codebook
               just
+              python3
             ];
           };
         }
