@@ -2,9 +2,16 @@ words = [
     "addrs",
     "backend's",
     "clippy",
+    "direnv",
     "dtolnay",
     "fdfind",
     "lossy",
+    "nicknovitski",
+    "nixbuild",
+    "nixos",
+    "nixpkgs",
+    "oxalica",
+    "pkgs",
     "raii",
     "rustfmt",
     "swatinem",
@@ -12,5 +19,8 @@ words = [
     "xff",
     "xzf",
 ]
-ignore_paths = ["Cargo.lock"]
+ignore_paths = [
+    "Cargo.lock",
+    "flake.lock",
+]
 ignore_patterns = ['\b[a-fA-F0-9]{64}\b']
