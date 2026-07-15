@@ -56,9 +56,11 @@ balancing_algorithm = "least_connections"
 
 ## 使い方
 
+[Nix](https://github.com/NixOS/nix)を利用している場合、ツールチェーンはflakeに含まれています。
+
 ### ビルドと実行
 
-Rustのインストール方法は[こちら](https://www.rust-lang.org/ja/tools/install)を参照してください。
+Nixを使わない場合、Rustのインストール方法は[こちら](https://www.rust-lang.org/ja/tools/install)を参照してください。
 
 ```sh
 cargo run
@@ -68,7 +70,7 @@ cargo run
 
 ### 簡単なデモ
 
-[Python](https://www.python.org/downloads/)と[Just](https://github.com/casey/just)が必要です。
+Nixを使わない場合、[Python](https://www.python.org/downloads/)と[Just](https://github.com/casey/just)をインストールしてください。
 
 ```sh
 just

@@ -56,9 +56,11 @@ Routes match on path prefix, with the longest matching prefix winning. Each rout
 
 ## Getting Started
 
+For [Nix](https://github.com/NixOS/nix) users, the toolchain is included as a flake.
+
 ### Building and running
 
-Rust can be installed as described [here](https://rust-lang.org/tools/install/).
+If not using Nix, Rust can be installed as described [here](https://rust-lang.org/tools/install/).
 
 ```sh
 cargo run
@@ -68,7 +70,7 @@ Log level can be changed with the `RUST_LOG` environment variable (e.g. `RUST_LO
 
 ### Quick demo
 
-Requires [Python](https://www.python.org/downloads/) and [Just](https://github.com/casey/just).
+If not using Nix, install [Python](https://www.python.org/downloads/) and [Just](https://github.com/casey/just).
 
 ```sh
 just
