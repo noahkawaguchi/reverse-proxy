@@ -13,13 +13,13 @@ use {
 /// One or more backends to be cycled through for round robin load balancing.
 /// Skips backends whose `healthy` flag is `false`.
 #[cfg_attr(test, derive(Debug))]
-pub struct RoundRobin {
+pub(crate) struct RoundRobin {
     backends: Vec<Arc<Backend>>,
     counter: AtomicUsize,
 }
 
 impl RoundRobin {
-    pub fn init(backends: Vec<Arc<Backend>>) -> Result<Self> {
+    pub(crate) fn init(backends: Vec<Arc<Backend>>) -> Result<Self> {
         if backends.is_empty() {
             bail!("route must have at least one backend address");
         }

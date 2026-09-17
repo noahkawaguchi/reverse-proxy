@@ -10,7 +10,7 @@ use {
 /// Returns `Err` for errors installing the signal handlers, but logs and does not return errors
 /// receiving the signals.
 #[cfg(unix)]
-pub fn listen() -> Result<impl Future<Output = ()>> {
+pub(crate) fn listen() -> Result<impl Future<Output = ()>> {
     use tokio::signal::unix;
 
     let mut sigint = unix::signal(unix::SignalKind::interrupt())?;
@@ -44,7 +44,7 @@ pub fn listen() -> Result<impl Future<Output = ()>> {
 /// Errors receiving Ctrl+C are logged, but not returned.
 #[expect(clippy::unnecessary_wraps, reason = "To match the Unix version of this function")]
 #[cfg(not(unix))]
-pub fn listen() -> Result<impl Future<Output = ()>> {
+pub(crate) fn listen() -> Result<impl Future<Output = ()>> {
     Ok(async {
         match tokio::signal::ctrl_c().await {
             Ok(()) => info!("Ctrl+C received, shutting down..."),

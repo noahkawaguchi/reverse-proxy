@@ -6,7 +6,7 @@ use {
 };
 
 #[derive(Deserialize)]
-pub struct HealthCheckConfig {
+pub(crate) struct HealthCheckConfig {
     pub path: String,
 
     #[serde(rename = "interval_secs", deserialize_with = "deserialize_duration_secs")]
@@ -15,14 +15,14 @@ pub struct HealthCheckConfig {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum BalancingAlgorithm {
+pub(crate) enum BalancingAlgorithm {
     RoundRobin,
     LeastConnections,
 }
 
 /// Serde-facing route config, deserialized directly from TOML.
 #[derive(Deserialize)]
-pub struct RouteConfig {
+pub(crate) struct RouteConfig {
     pub prefix: String,
     pub backend_addrs: Vec<SocketAddr>,
     pub health_check: HealthCheckConfig,
@@ -30,13 +30,13 @@ pub struct RouteConfig {
 }
 
 /// Runtime route, built from a `RouteConfig` after deserialization.
-pub struct Route {
+pub(crate) struct Route {
     pub prefix: String,
     pub balancer: Box<dyn LoadBalancer>,
 }
 
 #[derive(Deserialize)]
-pub struct Config {
+pub(crate) struct Config {
     pub listen_addr: SocketAddr,
     pub routes: Vec<RouteConfig>,
 
@@ -45,7 +45,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load() -> Result<Self> {
+    pub(crate) fn load() -> Result<Self> {
         let config_path = env::var("REVERSE_PROXY_CONFIG_PATH")
             .unwrap_or_else(|_| String::from("reverse-proxy.toml"));
 

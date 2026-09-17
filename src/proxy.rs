@@ -35,7 +35,7 @@ const HOP_BY_HOP_HEADERS: [HeaderName; 8] = [
     UPGRADE,
 ];
 
-pub async fn forward(
+pub(crate) async fn forward(
     req: Request<Incoming>,
     client_addr: SocketAddr,
     routes: Arc<[Route]>,

@@ -11,18 +11,18 @@ use {
 /// The amount of time to wait for a response when checking a backend's health.
 const HEALTH_CHECK_TIMEOUT: Duration = Duration::from_secs(5);
 
-pub struct HealthChecker {
+pub(crate) struct HealthChecker {
     backends: Vec<Arc<Backend>>,
     path: String,
     interval: Duration,
 }
 
 impl HealthChecker {
-    pub const fn new(backends: Vec<Arc<Backend>>, path: String, interval: Duration) -> Self {
+    pub(crate) const fn new(backends: Vec<Arc<Backend>>, path: String, interval: Duration) -> Self {
         Self { backends, path, interval }
     }
 
-    pub async fn run(self) -> ! {
+    pub(crate) async fn run(self) -> ! {
         loop {
             for backend in &self.backends {
                 let is_healthy = self.check_backend(backend.addr()).await;

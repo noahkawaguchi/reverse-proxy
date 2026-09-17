@@ -11,12 +11,12 @@ use {
 /// One or more backends selected by fewest active connections.
 /// Skips backends whose `healthy` flag is `false`. Breaks ties randomly.
 #[cfg_attr(test, derive(Debug))]
-pub struct LeastConnections {
+pub(crate) struct LeastConnections {
     backends: Vec<Arc<Backend>>,
 }
 
 impl LeastConnections {
-    pub fn init(backends: Vec<Arc<Backend>>) -> Result<Self> {
+    pub(crate) fn init(backends: Vec<Arc<Backend>>) -> Result<Self> {
         if backends.is_empty() {
             bail!("route must have at least one backend address");
         }
