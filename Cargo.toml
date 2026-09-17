@@ -19,7 +19,7 @@ tracing            = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 
 [lints.clippy]
-# All lint groups except restriction and cargo
+# All lints from groups other than restriction and cargo
 nursery  = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
 
@@ -53,14 +53,21 @@ shadow_reuse     = "forbid"
 shadow_same      = "forbid"
 shadow_unrelated = "forbid"
 
-# Superfluous naming
+# Misleading constructs
+infinite_loop                   = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+unused_trait_names              = "warn"
+
+# Redundant constructs
+redundant_pub_crate      = "allow" # Conflicts with `unreachable_pub`
 redundant_test_prefix    = "deny"
 unnecessary_self_imports = "warn"
-unused_trait_names       = "warn"
 
 [lints.rust]
 unsafe_code = "forbid"
 
 closure_returning_async_block = "warn"
 redundant_imports             = "warn"
+unreachable_pub               = "warn"
+unused_macro_rules            = "warn"
 unused_qualifications         = "warn"

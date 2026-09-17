@@ -16,7 +16,7 @@ use {
     tracing::{error, info, warn},
 };
 
-pub async fn run(
+pub(crate) async fn run(
     config: Config,
     listener: TcpListener,
     shutdown_signal: impl Future<Output = ()>,

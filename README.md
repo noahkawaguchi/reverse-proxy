@@ -15,21 +15,29 @@ An HTTP reverse proxy written in Rust. Supports multiple backends per route, two
 
 ## Features
 
-- **Load balancing algorithms**: Round robin or least connections, configurable per route.
-- **Health checks**: Periodic probing of backends, with unhealthy backends skipped automatically and recovered backends returned to the pool.
-- **Longest-prefix routing**: Support for multiple routes, each with independent backends and balancing strategy.
-- **Graceful shutdown**: Drains in-flight requests with a configurable timeout before exiting.
-- **HTTP correctness**: Strips hop-by-hop headers, appends to `X-Forwarded-For` chains, and rewrites `Host` headers.
+- Support for multiple routes using longest-prefix routing, each with independent backends and balancing strategies
+- Round robin or least connections load balancing algorithms, configurable per route
+- Strips hop-by-hop headers, appends to `X-Forwarded-For` chains, and rewrites `Host` headers
+- Periodic health checks on backends, with unhealthy backends skipped automatically and recovered backends returned to the pool
+- Drains in-flight requests with a configurable timeout and exits gracefully
 
 ## Design
 
-**Connection tracking**: The `Backend` struct wraps an atomic health flag and an atomic active connection counter. `BackendGuard` is an RAII guard that increments the counter on acquisition and decrements it on drop, so the least connections algorithm always sees an accurate count, even if a request completes unsuccessfully.
+### Connection Tracking
 
-**Load balancer abstraction**: `LoadBalancer` is a trait implemented by both `RoundRobin` and `LeastConnections`. New algorithms can be added without touching the proxying or routing logic.
+The `Backend` struct wraps an atomic health flag and an atomic active connection counter. `BackendGuard` is an RAII guard that increments the counter on acquisition and decrements it on drop, so the least connections algorithm always sees an accurate count, even if a request completes unsuccessfully.
 
-**Health checking**: Each route runs an independent Tokio task that polls backends on a configurable interval. Health state is written atomically, so the proxy never needs a lock to check whether a backend is available.
+### Load Balancer Abstraction
 
-**Graceful shutdown**: `SIGINT` or `SIGTERM` (or on non-Unix, Ctrl+C only) sets a broadcast channel flag that the server loop checks before accepting new connections. A `tokio::time::timeout` wraps the drain phase. If in-flight requests exceed the configured timeout, the proxy logs a warning and exits anyway instead of waiting indefinitely.
+`LoadBalancer` is a trait implemented by both `RoundRobin` and `LeastConnections`. New algorithms can be added without touching the proxying or routing logic.
+
+### Health Checking
+
+Each route runs an independent Tokio task that polls backends on a configurable interval. Health state is written atomically, so the proxy never needs a lock to check whether a backend is available.
+
+### Graceful Shutdown
+
+`SIGINT` or `SIGTERM` (or on non-Unix, Ctrl+C only) sets a broadcast channel flag that the server loop checks before accepting new connections. A `tokio::time::timeout` wraps the drain phase. If in-flight requests exceed the configured timeout, the proxy logs a warning and exits anyway instead of waiting indefinitely.
 
 ## Configuration
 
@@ -88,4 +96,4 @@ Tests cover route resolution, header handling, health detection and recovery, lo
 
 ## CI
 
-Tests, linting, format checking, and spell checking run via GitHub Actions on pushes and pull requests to `main` (as defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+Tests, linting, format checking, and spell checking run via GitHub Actions on pushes and pull requests to `main` (as defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)), and all checks must pass before merging into `main`.

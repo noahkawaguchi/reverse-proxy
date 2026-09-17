@@ -14,7 +14,7 @@ use {
 ///
 /// Returns `Err` if initializing the subscriber was unsuccessful, likely because there was already
 /// a global subscriber installed.
-pub fn init_with_default(default_level: LevelFilter) -> Result<()> {
+pub(crate) fn init_with_default(default_level: LevelFilter) -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::builder()
