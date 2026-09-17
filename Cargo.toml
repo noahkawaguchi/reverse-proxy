@@ -53,15 +53,15 @@ shadow_reuse     = "forbid"
 shadow_same      = "forbid"
 shadow_unrelated = "forbid"
 
-# Superfluous naming
+# Misleading constructs
+infinite_loop                   = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+unused_trait_names              = "warn"
+
+# Redundant constructs
+redundant_pub_crate      = "allow" # Conflicts with `unreachable_pub`
 redundant_test_prefix    = "deny"
 unnecessary_self_imports = "warn"
-unused_trait_names       = "warn"
-
-# Potentially misleading constructs
-infinite_loop                   = "warn"
-redundant_pub_crate             = "allow" # Opposite of `unreachable_pub`
-rest_pat_in_fully_bound_structs = "warn"
 
 [lints.rust]
 unsafe_code = "forbid"
