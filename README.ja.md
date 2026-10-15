@@ -2,6 +2,8 @@
 
 # reverse-proxy
 
+[![CI](https://github.com/noahkawaguchi/reverse-proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/noahkawaguchi/reverse-proxy/actions/workflows/ci.yml)
+
 Rustで実装したHTTPリバースプロキシです。ルートごとの複数バックエンド・2種類の負荷分散アルゴリズム・定期的なヘルスチェック・グレースフルシャットダウンに対応しています。
 
 ## 目次
