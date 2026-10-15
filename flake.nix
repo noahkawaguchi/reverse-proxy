@@ -24,7 +24,10 @@
             packages = with pkgs; [
               # Use nightly for formatting only
               rust-bin.nightly.latest.rustfmt
-              (rust-bin.stable."1.98.1".minimal.override {
+
+              # Latest as of the `rust-overlay` revision pinned in `flake.lock`, not as of each
+              # flake evaluation
+              (rust-bin.stable.latest.minimal.override {
                 extensions = [
                   "rust-src"
                   "rust-analyzer"
