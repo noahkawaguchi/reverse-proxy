@@ -32,6 +32,10 @@ lint:
 fmt-check:
     RUSTUP_TOOLCHAIN=nightly cargo fmt --all --check && echo 'Formatting check passed'
 
+# Apply formatting changes
+fmt:
+    RUSTUP_TOOLCHAIN=nightly cargo fmt --all
+
 # Check spelling with Codebook
 spell-check:
     git ls-files -z | xargs -0 codebook-lsp lint
