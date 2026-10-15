@@ -1,5 +1,15 @@
+####################################################################################################
+# Config
+####################################################################################################
+
 proxy-port := '3000'
 backend-port := '8000'
+
+everything-flags := '--workspace --all-targets'
+
+####################################################################################################
+# Demo
+####################################################################################################
 
 # Run a simple demo of the proxying behavior (default recipe)
 demo:
@@ -15,20 +25,28 @@ demo:
     until curl -s localhost:{{ proxy-port }} > /dev/null 2>&1; do sleep 0.5; done
     curl localhost:{{ proxy-port }}
 
+####################################################################################################
+# Testing and quality
+####################################################################################################
+
 # Run tests, lints, format checking, and spell checking to match CI
 all-checks: (test '--quiet') lint fmt-check spell-check
 
 # Run tests
 test *ARGS:
-    cargo test --workspace --all-targets {{ ARGS }}
+    cargo test {{ everything-flags }} {{ ARGS }}
 
 # Lint with Clippy, denying warnings
 lint:
-    cargo clippy --workspace --all-targets -- --deny warnings
+    cargo clippy {{ everything-flags }} -- --deny warnings
 
 # Check formatting
 fmt-check:
-    cargo fmt --all --check && echo 'Formatting check passed'
+    RUSTUP_TOOLCHAIN=nightly cargo fmt --all --check && echo 'Formatting check passed'
+
+# Apply formatting changes
+fmt:
+    RUSTUP_TOOLCHAIN=nightly cargo fmt --all
 
 # Check spelling with Codebook
 spell-check:

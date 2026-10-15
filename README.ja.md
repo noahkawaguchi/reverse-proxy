@@ -2,6 +2,8 @@
 
 # reverse-proxy
 
+[![CI](https://github.com/noahkawaguchi/reverse-proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/noahkawaguchi/reverse-proxy/actions/workflows/ci.yml)
+
 Rustで実装したHTTPリバースプロキシです。ルートごとの複数バックエンド・2種類の負荷分散アルゴリズム・定期的なヘルスチェック・グレースフルシャットダウンに対応しています。
 
 ## 目次
@@ -96,4 +98,4 @@ cargo test
 
 ## CI
 
-`main`ブランチへのプッシュおよびプルリクエスト時に、GitHub Actionsでテスト・リント・フォーマット確認・スペルチェックが実行され（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)参照）、 mainへのマージには全てのチェックに合格する必要があります。
+`main`ブランチへのプッシュおよびプルリクエスト時に、GitHub Actionsでテスト・リント・フォーマット確認・スペルチェックが実行され（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)参照）、 `main`へのマージには全てのチェックに合格する必要があります。

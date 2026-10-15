@@ -2,6 +2,8 @@
 
 # reverse-proxy
 
+[![CI](https://github.com/noahkawaguchi/reverse-proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/noahkawaguchi/reverse-proxy/actions/workflows/ci.yml)
+
 An HTTP reverse proxy written in Rust. Supports multiple backends per route, two load balancing algorithms, periodic health checks, and graceful shutdown.
 
 ## Table of Contents
