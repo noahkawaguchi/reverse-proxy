@@ -96,4 +96,4 @@ cargo test
 
 ## CI
 
-`main`ブランチへのプッシュおよびプルリクエスト時に、GitHub Actionsでテスト・リント・フォーマット確認・スペルチェックが実行され（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)参照）、 mainへのマージには全てのチェックに合格する必要があります。
+`main`ブランチへのプッシュおよびプルリクエスト時に、GitHub Actionsでテスト・リント・フォーマット確認・スペルチェックが実行され（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)参照）、 `main`へのマージには全てのチェックに合格する必要があります。
