@@ -1,6 +1,8 @@
 proxy-port := '3000'
 backend-port := '8000'
 
+everything-flags := '--workspace --all-targets'
+
 # Run a simple demo of the proxying behavior (default recipe)
 demo:
     #!/usr/bin/env bash
@@ -20,11 +22,11 @@ all-checks: (test '--quiet') lint fmt-check spell-check
 
 # Run tests
 test *ARGS:
-    cargo test --workspace --all-targets {{ ARGS }}
+    cargo test {{ everything-flags }} {{ ARGS }}
 
 # Lint with Clippy, denying warnings
 lint:
-    cargo clippy --workspace --all-targets -- --deny warnings
+    cargo clippy {{ everything-flags }} -- --deny warnings
 
 # Check formatting
 fmt-check:
