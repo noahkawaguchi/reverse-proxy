@@ -38,7 +38,7 @@ test *ARGS:
 
 # Lint with Clippy, denying warnings
 lint:
-    cargo clippy {{ everything-flags }} -- --deny warnings
+    CARGO_BUILD_WARNINGS=deny cargo clippy {{ everything-flags }}
 
 # Check formatting
 fmt-check:
