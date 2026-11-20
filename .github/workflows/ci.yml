@@ -28,10 +28,12 @@ jobs:
         uses: nix-community/cache-nix-action@v7
         with:
           primary-key: >-
-            nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+            nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.nix',
+            '**/flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}-
 
-      # Load the flake's devShell environment so rust-cache finds the correct rustc version
+      # Load the flake's devShell environment so rust-cache finds the correct
+      # rustc version
       - &nix-develop
         name: Load flake devShell
         uses: nicknovitski/nix-develop@v1
