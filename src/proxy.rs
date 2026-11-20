@@ -129,14 +129,12 @@ fn prepare_response<B>(mut resp: Response<B>) -> Response<B> {
 
 /// Removes the standard hop-by-hop headers and any custom headers named in the Connection header.
 fn strip_hop_by_hop_headers(headers: &mut HeaderMap) {
-    let extra = get_str_val(headers, &CONNECTION)
-        .map(|connection_val| {
-            connection_val
-                .split(',')
-                .map(|header_name| header_name.trim().to_lowercase())
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
+    let extra = get_str_val(headers, &CONNECTION).map_or_default(|connection_val| {
+        connection_val
+            .split(',')
+            .map(|header_name| header_name.trim().to_lowercase())
+            .collect::<Vec<_>>()
+    });
 
     for name in HOP_BY_HOP_HEADERS {
         headers.remove(name);
